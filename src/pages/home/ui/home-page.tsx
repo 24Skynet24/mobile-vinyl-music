@@ -1,28 +1,13 @@
-import { SafeAreaView, StyleSheet, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text } from 'react-native';
 
 export function HomePage() {
   return (
-    <SafeAreaView style={styles.screen}>
-      <Text style={styles.title}>Vinyl Music</Text>
-      <Text style={styles.description}>Home page shell for the mobile listening experience.</Text>
+    <SafeAreaView className="flex-1 gap-3 bg-white p-6">
+      <Text className="text-3xl font-bold text-neutral-900">Vinyl Music</Text>
+      <Text className="text-base text-neutral-500">
+        Home page shell for the mobile listening experience.
+      </Text>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    padding: 24,
-    gap: 12,
-    backgroundColor: '#ffffff',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#111111',
-  },
-  description: {
-    fontSize: 16,
-    color: '#666666',
-  },
-});

@@ -2,6 +2,8 @@
 
 .vscode/
 .claude/
+.tmp
+.agents
 
 # dependencies
 node_modules/

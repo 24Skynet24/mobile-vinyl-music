@@ -1,0 +1,1 @@
+export { GradientBg } from './gradient-bg';

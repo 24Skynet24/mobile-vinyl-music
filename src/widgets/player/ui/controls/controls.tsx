@@ -22,7 +22,7 @@ export function Controls({
   return (
     <View
       accessibilityRole="toolbar"
-      className={`w-full max-w-[360px] flex-row gap-4 items-center justify-between self-center ${className ?? ''}`}
+      className={`w-full max-w-[360px] flex-row gap-4 items-center justify-center self-center ${className ?? ''}`}
     >
       <RandomButton
         disabled={disabled}

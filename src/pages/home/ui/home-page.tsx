@@ -22,7 +22,9 @@ export function HomePage() {
     <GradientBg>
       <SafeAreaView className="flex-1">
         <View className="flex-1 relative">
-          <MenuButton onPress={() => {}} />
+          <View className="absolute right-4 top-4">
+            <MenuButton onPress={() => {}} />
+          </View>
 
           <Controls
             className="mt-auto"

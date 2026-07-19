@@ -3,13 +3,22 @@ import { Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { usePlayerAnimation } from '../lib/use-player-animation';
+import type { RepeatMode } from './control-button';
 import { Controls } from './controls';
 import { Timeline } from './timeline';
 import { Tonearm } from './tonearm';
 import { VinylRecord } from './vinyl-record';
 
+const NEXT_REPEAT_MODE: Record<RepeatMode, RepeatMode> = {
+  all: 'one',
+  none: 'all',
+  one: 'none',
+};
+
 export function Player() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [randomEnabled, setRandomEnabled] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('none');
   const { recordAnimatedStyle, tonearmAnimatedStyle } =
     usePlayerAnimation(isPlaying);
 
@@ -44,13 +53,15 @@ export function Player() {
       <Controls
         className="mb-8"
         isPlaying={isPlaying}
-        randomEnabled={false}
-        repeatMode="none"
+        randomEnabled={randomEnabled}
+        repeatMode={repeatMode}
         onNextPress={() => {}}
         onPlaybackTogglePress={() => setIsPlaying((current) => !current)}
         onPreviousPress={() => {}}
-        onRandomPress={() => {}}
-        onRepeatPress={() => {}}
+        onRandomPress={() => setRandomEnabled((current) => !current)}
+        onRepeatPress={() =>
+          setRepeatMode((current) => NEXT_REPEAT_MODE[current])
+        }
       />
     </View>
   );

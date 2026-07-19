@@ -1,16 +1,17 @@
 import { View } from "react-native";
 import {Svg, Rect} from "react-native-svg"
 
-export function Tonearm() {
+export function Tonearm({ className }: { className?: string }) {
     return (
-        <View className="w-[130px] h-[151px]">
-            <Svg width="130" height="151" viewBox="0 0 130 151" fill="none">
-                <Rect width="14.133" height="32.5514" rx="2" transform="matrix(0.778687 0.627412 -0.627417 0.778683 117.672 15.1011)" fill="#FFFEE9"/>
-                <Rect width="14.1329" height="37.0092" rx="2" transform="matrix(0.561225 0.827663 -0.827667 0.561219 32.2231 102.406)" fill="#FFFEE9"/>
-                <Rect width="15.3107" height="3.53323" transform="matrix(0.575584 0.817742 -0.817746 0.575578 32.2924 118.605)" fill="#FFFEE9"/>
-                <Rect width="6.76558" height="51.9801" transform="matrix(0.778687 0.627412 -0.627417 0.778683 100.997 41.1089)" fill="#FFFEE9"/>
-                <Rect width="6.76219" height="43.801" transform="matrix(0.575584 0.817742 -0.817747 0.575578 70.0088 80.0078)" fill="#FFFEE9"/>
+        <View className={"w-[130px] h-[151px]" + " " + className}>
+            <Svg width="143" height="166" viewBox="0 0 143 166" fill="none">
+                <Rect width="15.5462" height="35.8065" rx="2" transform="matrix(0.778686 0.627413 -0.627416 0.778684 129.439 16.6113)" fill="#FFFEE9"/>
+                <Rect width="15.5462" height="40.71" rx="2" transform="matrix(0.561224 0.827664 -0.827666 0.56122 35.4454 112.647)" fill="#FFFEE9"/>
+                <Rect width="16.8417" height="3.88655" transform="matrix(0.575583 0.817743 -0.817745 0.575579 35.5216 130.466)" fill="#FFFEE9"/>
+                <Rect width="7.44212" height="57.1781" transform="matrix(0.778686 0.627413 -0.627416 0.778684 111.096 45.2197)" fill="#FFFEE9"/>
+                <Rect width="7.43839" height="48.181" transform="matrix(0.575583 0.817743 -0.817746 0.575579 77.0094 88.0088)" fill="#FFFEE9"/>
             </Svg>
+
         </View>
     )
 }

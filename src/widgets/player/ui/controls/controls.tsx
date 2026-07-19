@@ -1,11 +1,7 @@
-import { View } from 'react-native';
+import { View } from "react-native";
 
-import {
-  ControlButton,
-  RandomButton,
-  RepeatButton,
-} from '../control-button';
-import type { ControlsProps } from './controls.types';
+import { ControlButton, RandomButton, RepeatButton } from "../control-button";
+import type { ControlsProps } from "./types";
 
 export function Controls({
   className,
@@ -22,7 +18,7 @@ export function Controls({
   return (
     <View
       accessibilityRole="toolbar"
-      className={`w-full max-w-[360px] flex-row gap-4 items-center justify-center self-center ${className ?? ''}`}
+      className={`w-full max-w-[360px] flex-row gap-4 items-center justify-center self-center ${className ?? ""}`}
     >
       <RandomButton
         disabled={disabled}
@@ -36,9 +32,9 @@ export function Controls({
         onPress={onPreviousPress}
       />
       <ControlButton
-        accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
+        accessibilityLabel={isPlaying ? "Pause" : "Play"}
         disabled={disabled}
-        icon={isPlaying ? 'pause' : 'play'}
+        icon={isPlaying ? "pause" : "play"}
         onPress={onPlayPausePress}
       />
       <ControlButton

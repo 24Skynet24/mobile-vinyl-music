@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { PropsWithChildren } from 'react';
 
-export function GradientBg({ children }: PropsWithChildren) {
+export function GradientBackground({ children }: PropsWithChildren) {
   return (
     <LinearGradient
       colors={['#251f1f', '#251f1f', '#44403d']}

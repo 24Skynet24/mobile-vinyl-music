@@ -1,7 +1,12 @@
-import { Svg, Path, Rect, G, Defs, ClipPath } from "react-native-svg";
-import {MenuButtonIconType} from "./type"
+import { ClipPath, Defs, G, Path, Rect, Svg } from 'react-native-svg';
 
-function AllMusics() {
+import type { BottomMenuIconName } from '../model/menu-items';
+
+type BottomMenuIconProps = {
+  iconName: BottomMenuIconName;
+};
+
+function AllMusic() {
     return (
         <Svg width="42" height="42" viewBox="0 0 42 42" fill="none">
             <G clipPath="url(#clip0_222_2)">
@@ -27,7 +32,7 @@ function Equalizer() {
     )
 }
 
-function PlayLists() {
+function Playlists() {
     return (
         <Svg width="42" height="42" viewBox="0 0 42 42" fill="none">
             <G clipPath="url(#clip0_222_4)">
@@ -65,11 +70,15 @@ function AddMusic() {
     )
 }
 
-export default function MenuButtonIcon({iconName}: MenuButtonIconType) {
-    switch (iconName) {
-        case 'playlists': return <PlayLists/>
-        case 'add-music': return <AddMusic/>
-        case 'equalizer': return <Equalizer/>
-        case 'all-music': return <AllMusics/>
-    }
+export function BottomMenuIcon({ iconName }: BottomMenuIconProps) {
+  switch (iconName) {
+    case 'playlists':
+      return <Playlists />;
+    case 'add-music':
+      return <AddMusic />;
+    case 'equalizer':
+      return <Equalizer />;
+    case 'all-music':
+      return <AllMusic />;
+  }
 }

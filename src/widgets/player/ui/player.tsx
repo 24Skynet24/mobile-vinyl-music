@@ -1,14 +1,14 @@
-import { Tonearm } from "@/shared/ui/tonearm";
-import { Disk } from "@/shared/ui/disk";
 import { View, Text } from "react-native";
 import { Controls } from "./controls";
 import { Timeline } from "./timeline";
+import { Tonearm } from "./tonearm";
+import { VinylRecord } from "./vinyl-record";
 
 export function Player() {
     return (
         <View className="flex-1 flex items-center justify-between px-[16px] pt-[32px]">
             <View className="relative flex items-center justify-center w-[300px] h-[300px] mb-8 mt-[5vh]">
-                <Disk className=""/>
+                <VinylRecord />
                 <Tonearm className="absolute -top-4 -right-4"/>
             </View>
 

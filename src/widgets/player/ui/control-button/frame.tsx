@@ -1,7 +1,7 @@
-import type { PropsWithChildren } from 'react';
-import { Pressable, View } from 'react-native';
+import type { PropsWithChildren } from "react";
+import { Pressable, View } from "react-native";
 
-import type { ControlButtonFrameProps } from './control-button.types';
+import type { ControlButtonFrameProps } from "./types";
 
 export function ControlButtonFrame({
   children,
@@ -13,7 +13,7 @@ export function ControlButtonFrame({
   return (
     <Pressable
       accessibilityRole="button"
-      className={`relative h-[52px] w-[52px] transition-transform duration-150 ease-out active:scale-95 disabled:opacity-40 ${className ?? ''}`}
+      className={`relative h-[52px] w-[52px] transition-transform duration-150 ease-out active:scale-95 disabled:opacity-40 ${className ?? ""}`}
       disabled={disabled}
       hitSlop={8}
       {...pressableProps}

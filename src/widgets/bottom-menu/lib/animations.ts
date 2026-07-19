@@ -1,6 +1,6 @@
 import { withTiming } from 'react-native-reanimated';
 
-export const createEnterBottomMenu = (menuHeight: number) => {
+export const createBottomMenuEnterAnimation = (menuHeight: number) => {
   return () => {
     'worklet';
 
@@ -15,7 +15,7 @@ export const createEnterBottomMenu = (menuHeight: number) => {
   };
 };
 
-export const createExitBottomMenu = (menuHeight: number) => {
+export const createBottomMenuExitAnimation = (menuHeight: number) => {
   return () => {
     'worklet';
 

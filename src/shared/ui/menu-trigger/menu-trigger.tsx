@@ -1,9 +1,9 @@
-import type { PressableProps } from "react-native";
-import { Pressable, View } from "react-native";
+import type { PressableProps } from 'react-native';
+import { Pressable, View } from 'react-native';
 
-type BurgerMenuProps = Pick<PressableProps, "onPress">;
+type MenuTriggerProps = Pick<PressableProps, 'onPress'>;
 
-export function BurgerMenu({ onPress }: BurgerMenuProps) {
+export function MenuTrigger({ onPress }: MenuTriggerProps) {
   return (
     <Pressable
       accessibilityRole="button"

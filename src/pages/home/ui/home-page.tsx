@@ -1,5 +1,5 @@
-import { GradientBg } from '@/shared/ui/gradient-bg';
-import { BurgerMenu } from '@/shared/ui/burger-menu';
+import { GradientBackground } from '@/shared/ui/gradient-background';
+import { MenuTrigger } from '@/shared/ui/menu-trigger';
 import { Overlay } from '@/shared/ui/overlay';
 import { BottomMenu } from '@/widgets/bottom-menu';
 import { Player } from '@/widgets/player';
@@ -11,12 +11,12 @@ export function HomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <GradientBg>
+    <GradientBackground>
       <View className="relative flex-1">
         <SafeAreaView className="flex-1">
           <View className="relative flex-1">
             <View className="absolute right-2 top-2 z-10">
-              <BurgerMenu onPress={() => setIsMenuOpen(true)} />
+              <MenuTrigger onPress={() => setIsMenuOpen(true)} />
             </View>
 
             <Player />
@@ -30,6 +30,6 @@ export function HomePage() {
           </>
         )}
       </View>
-    </GradientBg>
+    </GradientBackground>
   );
 }

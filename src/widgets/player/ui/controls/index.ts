@@ -1,2 +1,3 @@
-export { Controls } from './controls';
-export type { ControlsProps } from './controls.types';
+export { Controls } from "./controls";
+export type { ControlsProps } from "./types";
+

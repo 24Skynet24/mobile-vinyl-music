@@ -1,15 +1,15 @@
-import { View } from 'react-native';
+import { View } from "react-native";
 
-import { ControlButtonFrame } from './control-button-frame';
-import { RandomIcon } from './control-button-icons';
-import type { RandomButtonProps } from './control-button.types';
+import { ControlButtonFrame } from "./frame";
+import { RandomIcon } from "./icon";
+import type { RandomButtonProps } from "./types";
 
-const WHITE_MAIN = '#FFFEE9';
-const ORANGE_MAIN = '#D7452C';
+const WHITE_MAIN = "#FFFEE9";
+const ORANGE_MAIN = "#D7452C";
 
 export function RandomButton({
   enabled,
-  accessibilityLabel = enabled ? 'Disable shuffle' : 'Enable shuffle',
+  accessibilityLabel = enabled ? "Disable shuffle" : "Enable shuffle",
   accessibilityState,
   ...pressableProps
 }: RandomButtonProps) {

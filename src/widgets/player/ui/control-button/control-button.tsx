@@ -1,8 +1,8 @@
-import { View } from 'react-native';
+import { View } from "react-native";
 
-import { ControlButtonFrame } from './control-button-frame';
-import { ControlIcon } from './control-button-icons';
-import type { ControlButtonProps } from './control-button.types';
+import { ControlButtonFrame } from "./frame";
+import { ControlIcon } from "./icon";
+import type { ControlButtonProps } from "./types";
 
 export function ControlButton({
   icon,
@@ -11,8 +11,8 @@ export function ControlButton({
   disabled,
   ...pressableProps
 }: ControlButtonProps) {
-  const hasOffset = icon === 'prev' || icon === 'next';
-  const isPause = icon === 'pause';
+  const hasOffset = icon === "prev" || icon === "next";
+  const isPause = icon === "pause";
 
   return (
     <ControlButtonFrame
@@ -25,8 +25,8 @@ export function ControlButton({
       <View
         className={`relative h-full w-full items-center justify-center border-2 ${
           isPause
-            ? 'border-black-main bg-orange-main'
-            : 'border-orange-main bg-black-main'
+            ? "border-black-main bg-orange-main"
+            : "border-orange-main bg-black-main"
         }`}
       >
         <ControlIcon icon={icon} />

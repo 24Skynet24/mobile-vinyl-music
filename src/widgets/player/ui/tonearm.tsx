@@ -1,9 +1,9 @@
-import { View } from "react-native";
-import {Svg, Rect} from "react-native-svg"
+import { View } from 'react-native';
+import { Rect, Svg } from 'react-native-svg';
 
 export function Tonearm({ className }: { className?: string }) {
     return (
-        <View className={"w-[130px] h-[151px]" + " " + className}>
+        <View className={`h-[151px] w-[130px] ${className ?? ''}`}>
             <Svg width="143" height="166" viewBox="0 0 143 166" fill="none">
                 <Rect width="15.5462" height="35.8065" rx="2" transform="matrix(0.778686 0.627413 -0.627416 0.778684 129.439 16.6113)" fill="#FFFEE9"/>
                 <Rect width="15.5462" height="40.71" rx="2" transform="matrix(0.561224 0.827664 -0.827666 0.56122 35.4454 112.647)" fill="#FFFEE9"/>
@@ -13,5 +13,5 @@ export function Tonearm({ className }: { className?: string }) {
             </Svg>
 
         </View>
-    )
+    );
 }

@@ -1,4 +1,4 @@
-import { GradientBg } from '@/shared/ui/gradient-bg';
+import { GradientBackground } from '@/shared/ui/gradient-background';
 import { useMemo } from 'react';
 import Animated from 'react-native-reanimated';
 import {
@@ -6,13 +6,18 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
-import { createEnterBottomMenu, createExitBottomMenu } from './animation';
-import { type BottomMenuAction } from './data';
-import { MenuButton } from '@/shared/ui/menu-button';
-import { View } from 'react-native';
+import {
+  createBottomMenuEnterAnimation,
+  createBottomMenuExitAnimation,
+} from '../lib/animations';
+import {
+  bottomMenuItems,
+  type BottomMenuAction,
+} from '../model/menu-items';
+import { BottomMenuButton } from './bottom-menu-button';
 
 type BottomMenuProps = {
-  onActionPress?: (action: BottomMenuAction) => void;
+  onActionPress: (action: BottomMenuAction) => void;
 };
 
 const MENU_CONTENT_HEIGHT = 128;
@@ -21,11 +26,11 @@ export function BottomMenu({ onActionPress }: BottomMenuProps) {
   const { bottom } = useSafeAreaInsets();
   const menuHeight = MENU_CONTENT_HEIGHT + bottom;
   const enterBottomMenu = useMemo(
-    () => createEnterBottomMenu(menuHeight),
+    () => createBottomMenuEnterAnimation(menuHeight),
     [menuHeight],
   );
   const exitBottomMenu = useMemo(
-    () => createExitBottomMenu(menuHeight),
+    () => createBottomMenuExitAnimation(menuHeight),
     [menuHeight],
   );
 
@@ -36,14 +41,21 @@ export function BottomMenu({ onActionPress }: BottomMenuProps) {
       exiting={exitBottomMenu}
       style={{ height: menuHeight }}
     >
-      <GradientBg>
-        <View className='flex flex-row items-start justify-center flex-1 mt-8 gap-4'>
-          <MenuButton iconName='equalizer' onPress={() => {}}/>
-          <MenuButton iconName='add-music' onPress={() => {}}/>
-          <MenuButton iconName='all-music' onPress={() => {}}/>
-          <MenuButton iconName='playlists' onPress={() => {}}/>
-        </View>
-      </GradientBg>
+      <GradientBackground>
+        <SafeAreaView
+          className="flex-1 flex-row items-start justify-center gap-4 pt-8"
+          edges={['bottom']}
+        >
+          {bottomMenuItems.map((item) => (
+            <BottomMenuButton
+              key={item.id}
+              accessibilityLabel={item.accessibilityLabel}
+              iconName={item.iconName}
+              onPress={() => onActionPress(item.id)}
+            />
+          ))}
+        </SafeAreaView>
+      </GradientBackground>
     </Animated.View>
   );
 }

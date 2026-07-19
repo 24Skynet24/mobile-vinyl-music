@@ -1,11 +1,9 @@
-import type { RepeatMode } from '../control-button';
-
 export interface ControlsProps {
   className?: string;
   disabled?: boolean;
   isPlaying: boolean;
   randomEnabled: boolean;
-  repeatMode: RepeatMode;
+  repeatMode: 'none' | 'all' | 'one';
   onNextPress: () => void;
   onPlayPausePress: () => void;
   onPreviousPress: () => void;

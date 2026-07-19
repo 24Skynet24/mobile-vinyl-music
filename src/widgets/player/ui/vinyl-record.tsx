@@ -1,7 +1,7 @@
-import { View } from "react-native";
-import { Svg, Circle, Path } from "react-native-svg";
+import { View } from 'react-native';
+import { Circle, Path, Svg } from 'react-native-svg';
 
-export function Disk({ className }: { className?: string }) {
+export function VinylRecord({ className }: { className?: string }) {
   return (
     <View className={className}>
       <Svg

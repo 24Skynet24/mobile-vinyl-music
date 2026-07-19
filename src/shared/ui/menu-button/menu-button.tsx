@@ -8,7 +8,7 @@ export function MenuButton({ onPress }: MenuButtonProps) {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Open menu"
-      className="h-[32px] w-[32px] items-center justify-center gap-1 rounded bg-black-main/30 active:opacity-60"
+      className="h-[36px] w-[36px] items-center justify-center gap-1 rounded bg-black-main/30 active:opacity-60"
       hitSlop={8}
       onPress={onPress}
     >

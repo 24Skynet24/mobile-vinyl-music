@@ -1,23 +1,17 @@
-import type { PressableProps } from "react-native";
-import { Pressable, View } from "react-native";
+import { Pressable } from "react-native";
+import { MenuButtonProps } from "./type";
+import MenuButtonIcon from "./icon"
 
-type MenuButtonProps = Pick<PressableProps, "onPress">;
-
-export function MenuButton({ onPress }: MenuButtonProps) {
+export function MenuButton({ iconName, onPress }: MenuButtonProps) {
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Open menu"
-      className="h-[36px] w-[36px] items-center justify-center gap-1 rounded bg-black-main/30 active:opacity-60"
-      hitSlop={8}
-      onPress={onPress}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={"Open " + iconName}
+        onPress={onPress}
+        className="w-20 h-20 bg-black-main rounded-[8px] flex items-center justify-center transition-transform duration-150 ease-out active:scale-95"
     >
-      {[0, 1, 2].map((item) => (
-        <View key={item} className="flex-row items-center gap-1">
-          <View className="h-1 w-1 rounded-full bg-orange-main" />
-          <View className="h-1 w-5 rounded-full bg-orange-main" />
-        </View>
-      ))}
+      <MenuButtonIcon iconName={iconName} />
     </Pressable>
   );
 }

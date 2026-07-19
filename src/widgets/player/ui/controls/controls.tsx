@@ -10,7 +10,7 @@ export function Controls({
   randomEnabled,
   repeatMode,
   onNextPress,
-  onPlayPausePress,
+  onPlaybackTogglePress,
   onPreviousPress,
   onRandomPress,
   onRepeatPress,
@@ -32,10 +32,10 @@ export function Controls({
         onPress={onPreviousPress}
       />
       <ControlButton
-        accessibilityLabel={isPlaying ? "Pause" : "Play"}
+        accessibilityLabel={isPlaying ? "Stop" : "Play"}
         disabled={disabled}
-        icon={isPlaying ? "pause" : "play"}
-        onPress={onPlayPausePress}
+        icon={isPlaying ? "stop" : "play"}
+        onPress={onPlaybackTogglePress}
       />
       <ControlButton
         accessibilityLabel="Next track"

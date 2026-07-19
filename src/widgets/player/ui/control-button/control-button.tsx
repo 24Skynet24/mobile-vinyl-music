@@ -12,7 +12,7 @@ export function ControlButton({
   ...pressableProps
 }: ControlButtonProps) {
   const hasOffset = icon === "prev" || icon === "next";
-  const isPause = icon === "pause";
+  const isStop = icon === "stop";
 
   return (
     <ControlButtonFrame
@@ -24,7 +24,7 @@ export function ControlButton({
     >
       <View
         className={`relative h-full w-full items-center justify-center border-2 ${
-          isPause
+          isStop
             ? "border-black-main bg-orange-main"
             : "border-orange-main bg-black-main"
         }`}

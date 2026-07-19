@@ -42,7 +42,7 @@ function PlayIcon() {
   );
 }
 
-function PauseIcon() {
+function StopIcon() {
   return (
     <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
       <Path
@@ -63,8 +63,8 @@ export function ControlIcon({ icon }: { icon: ControlButtonIcon }) {
       return <PreviousIcon />;
     case "next":
       return <NextIcon />;
-    case "pause":
-      return <PauseIcon />;
+    case "stop":
+      return <StopIcon />;
     case "play":
       return <PlayIcon />;
   }

@@ -1,6 +1,6 @@
 import type { PressableProps } from 'react-native';
 
-export type ControlButtonIcon = 'play' | 'pause' | 'next' | 'prev';
+export type ControlButtonIcon = 'play' | 'stop' | 'next' | 'prev';
 
 export type RepeatMode = 'none' | 'all' | 'one';
 

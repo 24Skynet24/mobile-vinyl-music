@@ -5,7 +5,7 @@ export interface ControlsProps {
   randomEnabled: boolean;
   repeatMode: 'none' | 'all' | 'one';
   onNextPress: () => void;
-  onPlayPausePress: () => void;
+  onPlaybackTogglePress: () => void;
   onPreviousPress: () => void;
   onRandomPress: () => void;
   onRepeatPress: () => void;

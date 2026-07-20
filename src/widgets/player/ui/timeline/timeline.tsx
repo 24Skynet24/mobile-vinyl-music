@@ -1,4 +1,6 @@
-import { View, Text } from "react-native"
+import { View } from "react-native"
+
+import { TextBebas } from '@/shared/ui/text';
 
 export function Timeline() {
     return (
@@ -8,8 +10,8 @@ export function Timeline() {
             </View>
 
             <View className="flex flex-row items-center justify-between">
-                <Text className="text-orange-main">00:00</Text>
-                <Text className="text-white-main">00:00</Text>
+                <TextBebas className="text-orange-main">00:00</TextBebas>
+                <TextBebas className="text-white-main">00:00</TextBebas>
             </View>
         </View>
     )

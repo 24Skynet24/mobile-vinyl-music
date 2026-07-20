@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
+
+import { TextBebas } from '@/shared/ui/text';
 
 import { usePlayerAnimation } from '../lib/use-player-animation';
 import type { RepeatMode } from './control-button';
@@ -38,11 +40,13 @@ export function Player() {
       </View>
 
       <View className="w-full gap-2">
-        <Text className="w-full text-[42px] text-orange-main">Music name</Text>
+        <TextBebas className="w-full text-[42px] text-orange-main">
+          Music name
+        </TextBebas>
         <View className="max-w-full flex-row items-center gap-2">
-          <Text className="text-xl text-gray-main">Album</Text>
+          <TextBebas className="text-xl text-gray-main">Album</TextBebas>
           <View className="h-2 w-2 rounded-full bg-gray-main" />
-          <Text className="text-xl text-gray-main">2024</Text>
+          <TextBebas className="text-xl text-gray-main">2024</TextBebas>
         </View>
       </View>
 

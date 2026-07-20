@@ -16,6 +16,7 @@ export function ControlButtonFrame({
       className={`relative h-[52px] w-[52px] transition-transform duration-150 ease-out active:scale-95 disabled:opacity-40 ${className ?? ""}`}
       disabled={disabled}
       hitSlop={8}
+      style={{ boxShadow: "0 0 10px #d7452c" }}
       {...pressableProps}
     >
       {hasOffset && (

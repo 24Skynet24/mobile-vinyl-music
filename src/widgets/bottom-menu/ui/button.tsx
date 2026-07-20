@@ -2,7 +2,7 @@ import type { PressableProps } from 'react-native';
 import { Pressable } from 'react-native';
 
 import type { BottomMenuIconName } from '../model/menu-items';
-import { BottomMenuIcon } from './bottom-menu-icon';
+import { BottomMenuIcon } from './icon';
 
 type BottomMenuButtonProps = Pick<PressableProps, 'onPress'> & {
   accessibilityLabel: string;

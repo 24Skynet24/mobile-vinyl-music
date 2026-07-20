@@ -14,7 +14,7 @@ import {
   bottomMenuItems,
   type BottomMenuAction,
 } from '../model/menu-items';
-import { BottomMenuButton } from './bottom-menu-button';
+import { BottomMenuButton } from './button';
 
 type BottomMenuProps = {
   onActionPress: (action: BottomMenuAction) => void;

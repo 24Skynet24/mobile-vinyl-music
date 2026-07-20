@@ -14,7 +14,13 @@ module.exports = {
 
       fontFamily: {
         bebas: ['BebasNeue'],
-        futura: ['FuturaPT'],
+        futura: ['FuturaPTBook'],
+        'futura-light': ['FuturaPTLight'],
+        'futura-medium': ['FuturaPTMedium'],
+        'futura-demi': ['FuturaPTDemi'],
+        'futura-heavy': ['FuturaPTHeavy'],
+        'futura-bold': ['FuturaPTBold'],
+        'futura-extra-bold': ['FuturaPTExtraBold'],
       },
     },
   },

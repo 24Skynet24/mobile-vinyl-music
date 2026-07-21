@@ -13,7 +13,7 @@ export function Overlay({ onPress }: OverlayProps) {
       exiting={FadeOut.duration(200)}
     >
       <Pressable
-        accessibilityLabel="Close menu"
+        accessibilityLabel="Close panel"
         accessibilityRole="button"
         className="flex-1"
         onPress={onPress}

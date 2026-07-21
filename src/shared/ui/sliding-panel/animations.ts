@@ -1,6 +1,6 @@
 import { withTiming } from 'react-native-reanimated';
 
-export const createBottomMenuEnterAnimation = (menuHeight: number) => {
+export const createSlidingPanelEnterAnimation = (panelHeight: number) => {
   return () => {
     'worklet';
 
@@ -9,20 +9,20 @@ export const createBottomMenuEnterAnimation = (menuHeight: number) => {
         transform: [{ translateY: withTiming(0, { duration: 260 }) }],
       },
       initialValues: {
-        transform: [{ translateY: menuHeight }],
+        transform: [{ translateY: panelHeight }],
       },
     };
   };
 };
 
-export const createBottomMenuExitAnimation = (menuHeight: number) => {
+export const createSlidingPanelExitAnimation = (panelHeight: number) => {
   return () => {
     'worklet';
 
     return {
       animations: {
         transform: [
-          { translateY: withTiming(menuHeight, { duration: 240 }) },
+          { translateY: withTiming(panelHeight, { duration: 240 }) },
         ],
       },
       initialValues: {

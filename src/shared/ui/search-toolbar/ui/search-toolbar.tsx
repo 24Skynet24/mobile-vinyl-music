@@ -6,7 +6,7 @@ import { SearchIcon, SortIcon } from './icons';
 import { PressEffect } from './press-effect';
 import { SortMenu } from './sort-menu';
 
-export function SearchToolbar({ onSortChange }: SearchToolbarProps) {
+export function SearchToolbar({ onSortChange, placeholder }: SearchToolbarProps) {
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
   const [selectedSort, setSelectedSort] = useState<SortType>('date-added');
 
@@ -24,7 +24,7 @@ export function SearchToolbar({ onSortChange }: SearchToolbarProps) {
         <View className="relative flex-1">
           <TextInput
             className="w-full border-b-white-main font-futura text-[16px] text-white-main placeholder:text-white-main"
-            placeholder="Search (title or album)..."
+            placeholder={placeholder}
             placeholderTextColor="#999999"
           />
         </View>

@@ -32,7 +32,7 @@ function Equalizer() {
     )
 }
 
-function Playlists() {
+function Playlist() {
     return (
         <Svg width="42" height="42" viewBox="0 0 42 42" fill="none">
             <G clipPath="url(#clip0_222_4)">
@@ -72,8 +72,8 @@ function AddMusic() {
 
 export function BottomMenuIcon({ iconName }: BottomMenuIconProps) {
   switch (iconName) {
-    case 'playlists':
-      return <Playlists />;
+    case 'playlist':
+      return <Playlist />;
     case 'add-music':
       return <AddMusic />;
     case 'equalizer':

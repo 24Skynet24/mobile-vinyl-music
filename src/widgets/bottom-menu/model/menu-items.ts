@@ -15,9 +15,9 @@ export const bottomMenuItems = [
     id: 'all-music',
   },
   {
-    accessibilityLabel: 'Open playlists',
-    iconName: 'playlists',
-    id: 'playlists',
+    accessibilityLabel: 'Open playlist',
+    iconName: 'playlist',
+    id: 'playlist',
   },
 ] as const;
 

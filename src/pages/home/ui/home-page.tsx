@@ -4,6 +4,7 @@ import { MenuTrigger } from '@/shared/ui/menu-trigger';
 import { BottomMenu } from '@/widgets/bottom-menu';
 import { MusicPanel } from '@/widgets/music-panel';
 import { Player } from '@/widgets/player';
+import { PlaylistPanel } from '@/widgets/playlist-panel';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -35,6 +36,10 @@ export function HomePage() {
                 openPanel('music');
                 return;
               }
+              else if (action === 'playlist') {
+                openPanel("playlist")
+                return;
+              }
 
               closeAllPanels();
             }}
@@ -44,6 +49,9 @@ export function HomePage() {
 
         {activePanel === 'music' && (
           <MusicPanel onClose={closeCurrentPanel} />
+        )}
+        {activePanel === 'playlist' && (
+          <PlaylistPanel onClose={closeCurrentPanel} />
         )}
       </View>
     </GradientBackground>

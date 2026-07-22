@@ -6,6 +6,8 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 
+import { AppProviders } from '@/providers/app-providers';
+
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -32,7 +34,9 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false }} />
+      <AppProviders>
+        <Stack screenOptions={{ headerShown: false }} />
+      </AppProviders>
     </SafeAreaProvider>
   );
 }

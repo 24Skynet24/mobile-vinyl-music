@@ -1,6 +1,7 @@
 import { usePanelNavigation } from '@/features/panel-navigation';
 import { GradientBackground } from '@/shared/ui/gradient-background';
 import { MenuTrigger } from '@/shared/ui/menu-trigger';
+import { AddMusicPanel } from '@/widgets/add-music-panel/ui/add-music-panel';
 import { BottomMenu } from '@/widgets/bottom-menu';
 import { MusicPanel } from '@/widgets/music-panel';
 import { Player } from '@/widgets/player';
@@ -40,6 +41,10 @@ export function HomePage() {
                 openPanel("playlist")
                 return;
               }
+              else if (action === 'add-music') {
+                openPanel("add-music")
+                return;
+              }
 
               closeAllPanels();
             }}
@@ -52,6 +57,9 @@ export function HomePage() {
         )}
         {activePanel === 'playlist' && (
           <PlaylistPanel onClose={closeCurrentPanel} />
+        )}
+        {activePanel === 'add-music' && (
+          <AddMusicPanel onClose={closeCurrentPanel} />
         )}
       </View>
     </GradientBackground>

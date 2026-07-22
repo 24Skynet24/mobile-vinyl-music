@@ -1,8 +1,10 @@
 import type { PressableProps } from 'react-native';
 
+import type { RepeatMode } from '@/entities/playback';
+
 export type ControlButtonIcon = 'play' | 'stop' | 'next' | 'prev';
 
-export type RepeatMode = 'none' | 'all' | 'one';
+export type { RepeatMode };
 
 export interface ControlButtonFrameProps
   extends Omit<PressableProps, 'children'> {

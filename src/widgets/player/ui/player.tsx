@@ -1,28 +1,40 @@
-import { useState } from 'react';
 import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { usePlayback } from '@/entities/playback';
 import { TextBebas } from '@/shared/ui/text';
 
 import { usePlayerAnimation } from '../lib/use-player-animation';
-import type { RepeatMode } from './control-button';
 import { Controls } from './controls';
 import { Timeline } from './timeline';
 import { Tonearm } from './tonearm';
 import { VinylRecord } from './vinyl-record';
 
-const NEXT_REPEAT_MODE: Record<RepeatMode, RepeatMode> = {
-  all: 'one',
-  none: 'all',
-  one: 'none',
-};
-
 export function Player() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [randomEnabled, setRandomEnabled] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<RepeatMode>('none');
+  const {
+    currentTrack,
+    currentTime,
+    cycleRepeatMode,
+    duration,
+    isHydrated,
+    isPlaying,
+    nextTrack,
+    previousTrack,
+    randomEnabled,
+    repeatMode,
+    seekTo,
+    togglePlayback,
+    toggleRandom,
+  } = usePlayback();
   const { recordAnimatedStyle, tonearmAnimatedStyle } =
     usePlayerAnimation(isPlaying);
+  const metadata = currentTrack
+    ? [
+        currentTrack.artist,
+        currentTrack.album,
+        currentTrack.year?.toString(),
+      ].filter((value): value is string => Boolean(value))
+    : [];
 
   return (
     <View className="flex-1 items-center justify-between px-4 pt-8">
@@ -41,17 +53,31 @@ export function Player() {
 
       <View className="w-full gap-2">
         <TextBebas className="w-full text-[42px] text-orange-main">
-          Music name
+          {currentTrack?.title || (isHydrated ? 'Music name' : '')}
         </TextBebas>
-        <View className="max-w-full flex-row items-center gap-2">
-          <TextBebas className="text-xl text-gray-main">Album</TextBebas>
-          <View className="h-2 w-2 rounded-full bg-gray-main" />
-          <TextBebas className="text-xl text-gray-main">2024</TextBebas>
-        </View>
+        {metadata.length > 0 ? (
+          <View className="max-w-full flex-row flex-wrap items-center gap-2">
+            {metadata.map((value, index) => (
+              <View className="flex-row items-center gap-2" key={`${value}-${index}`}>
+                {index > 0 ? (
+                  <View className="h-2 w-2 rounded-full bg-gray-main" />
+                ) : null}
+                <TextBebas className="text-xl text-gray-main">
+                  {value}
+                </TextBebas>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
 
       <View className="w-full">
-        <Timeline />
+        <Timeline
+          currentTime={currentTime}
+          disabled={!currentTrack}
+          duration={duration}
+          onSeek={seekTo}
+        />
       </View>
 
       <Controls
@@ -59,13 +85,11 @@ export function Player() {
         isPlaying={isPlaying}
         randomEnabled={randomEnabled}
         repeatMode={repeatMode}
-        onNextPress={() => {}}
-        onPlaybackTogglePress={() => setIsPlaying((current) => !current)}
-        onPreviousPress={() => {}}
-        onRandomPress={() => setRandomEnabled((current) => !current)}
-        onRepeatPress={() =>
-          setRepeatMode((current) => NEXT_REPEAT_MODE[current])
-        }
+        onNextPress={nextTrack}
+        onPlaybackTogglePress={togglePlayback}
+        onPreviousPress={previousTrack}
+        onRandomPress={toggleRandom}
+        onRepeatPress={cycleRepeatMode}
       />
     </View>
   );

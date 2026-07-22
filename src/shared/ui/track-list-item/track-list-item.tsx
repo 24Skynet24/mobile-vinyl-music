@@ -3,7 +3,7 @@ import { TextBebas } from "../text";
 import { Svg, Path } from "react-native-svg";
 import { TrackListItemProps } from "./types";
 
-export function TrackListItem({onPress, onRemove, isRemove}: TrackListItemProps) {
+export function TrackListItem({onPress, onRemove, onAdd, isRemove, isAdd}: TrackListItemProps) {
   return (
     <Pressable className="bg-black-main flex flex-row items-center w-full" onPress={onPress}>
       <View className="w-16 h-16">
@@ -35,7 +35,15 @@ export function TrackListItem({onPress, onRemove, isRemove}: TrackListItemProps)
             </Svg>
           </Pressable>
         }
-
+        {isAdd &&
+          <Pressable className="w-5 h-5" onPress={onAdd}>
+            <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <Path d="M9.99995 16.8C6.23995 16.8 3.19995 13.76 3.19995 9.99995C3.19995 6.23995 6.23995 3.19995 9.99995 3.19995C13.76 3.19995 16.8 6.23995 16.8 9.99995C16.8 13.76 13.76 16.8 9.99995 16.8ZM9.99995 3.99995C6.67995 3.99995 3.99995 6.67995 3.99995 9.99995C3.99995 13.32 6.67995 16 9.99995 16C13.32 16 16 13.32 16 9.99995C16 6.67995 13.32 3.99995 9.99995 3.99995Z" fill="#FFFEE9"/>
+              <Path d="M6.40002 9.59998H13.6V10.4H6.40002V9.59998Z" fill="#FFFEE9"/>
+              <Path d="M9.59998 6.40002H10.4V13.6H9.59998V6.40002Z" fill="#FFFEE9"/>
+            </Svg>
+          </Pressable> 
+        }
       </View>
     </Pressable>
   );

@@ -19,7 +19,7 @@ export function MusicPanel({onClose}: MusicPanelProps) {
         <SearchToolbar placeholder='Search (title or album)...'/>
       </View>
       <View className="w-full px-4">
-        <TrackListItem />
+        <TrackListItem isAdd={true} isRemove={true}/>
       </View>
     </SlidingPanel>
   );

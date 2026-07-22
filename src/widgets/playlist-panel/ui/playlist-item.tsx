@@ -1,5 +1,6 @@
-import { View, Image, Pressable } from "react-native";
+import { Pressable, View } from "react-native";
 import { Svg, Path, G, Defs, ClipPath, Rect } from "react-native-svg";
+import { CoverImage } from '@/shared/ui/cover-image';
 import { TextFutura, TextBebas } from "@/shared/ui/text";
 import { PlayListItemProps } from "../types";
 
@@ -11,12 +12,18 @@ export function PlaylistItem({
   playlistDescription,
   onEdit,
   onDelete,
+  onPress,
   image,
+  isProtected = false,
 }: PlayListItemProps) {
   return (
-    <Pressable className="flex flex-row gap-4 w-full h-[120px]">
+    <Pressable
+      accessibilityLabel={`Open ${playlistTitle}`}
+      className="h-[120px] w-full flex-row gap-4 bg-black-main/40 active:opacity-70"
+      onPress={onPress}
+    >
       <View className="w-[120px] h-[120px]">
-        <Image className="w-full h-full" source={image || cover} />
+        <CoverImage fallbackSource={cover} uri={image} />
       </View>
 
       <View className="flex flex-col py-2 justify-between">
@@ -34,8 +41,16 @@ export function PlaylistItem({
         </TextFutura>
       </View>
 
-      <View className="flex flex-col gap-8 pt-4 ml-auto">
-        <Pressable onPress={onDelete}>
+      {!isProtected ? (
+      <View className="ml-auto flex-col gap-5 pr-2 pt-2">
+        <Pressable
+          accessibilityLabel={`Delete ${playlistTitle}`}
+          className="h-9 w-9 items-center justify-center"
+          onPress={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
+        >
           <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <G clipPath="url(#clip0_242_9)">
               <Path
@@ -53,7 +68,14 @@ export function PlaylistItem({
           </Svg>
         </Pressable>
 
-        <Pressable onPress={onEdit}>
+        <Pressable
+          accessibilityLabel={`Edit ${playlistTitle}`}
+          className="h-9 w-9 items-center justify-center"
+          onPress={(event) => {
+            event.stopPropagation();
+            onEdit();
+          }}
+        >
           <Svg
             width="20"
             height="20"
@@ -75,6 +97,7 @@ export function PlaylistItem({
           </Svg>
         </Pressable>
       </View>
+      ) : null}
     </Pressable>
   );
 }

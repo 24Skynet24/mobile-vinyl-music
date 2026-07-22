@@ -1,7 +1,11 @@
 export type SortType = 'duration' | 'alphabet' | 'date-added';
 
 export type SearchToolbarProps = {
-  placeholder: string
+  placeholder: string;
+  query?: string;
+  selectedSort?: SortType;
+  showSort?: boolean;
+  onQueryChange?: (query: string) => void;
   onSortChange?: (sortType: SortType) => void;
 };
 

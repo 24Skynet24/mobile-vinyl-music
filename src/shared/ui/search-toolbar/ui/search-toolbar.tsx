@@ -6,12 +6,17 @@ import { SearchIcon, SortIcon } from './icons';
 import { PressEffect } from './press-effect';
 import { SortMenu } from './sort-menu';
 
-export function SearchToolbar({ onSortChange, placeholder }: SearchToolbarProps) {
+export function SearchToolbar({
+  onQueryChange,
+  onSortChange,
+  placeholder,
+  query,
+  selectedSort = 'date-added',
+  showSort = true,
+}: SearchToolbarProps) {
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
-  const [selectedSort, setSelectedSort] = useState<SortType>('date-added');
 
   const handleSortChange = (sortType: SortType) => {
-    setSelectedSort(sortType);
     setIsSortMenuOpen(false);
     onSortChange?.(sortType);
   };
@@ -23,25 +28,31 @@ export function SearchToolbar({ onSortChange, placeholder }: SearchToolbarProps)
 
         <View className="relative flex-1">
           <TextInput
+            accessibilityLabel={placeholder}
+            autoCapitalize="none"
             className="w-full border-b-white-main font-futura text-[16px] text-white-main placeholder:text-white-main"
+            onChangeText={onQueryChange}
             placeholder={placeholder}
             placeholderTextColor="#999999"
+            value={query}
           />
         </View>
 
-        <PressEffect
-          accessibilityLabel="Choose sorting"
-          accessibilityRole="button"
-          accessibilityState={{ expanded: isSortMenuOpen }}
-          className="ml-auto"
-          hitSlop={8}
-          onPress={() => setIsSortMenuOpen((isOpen) => !isOpen)}
-        >
-          <SortIcon />
-        </PressEffect>
+        {showSort ? (
+          <PressEffect
+            accessibilityLabel="Choose sorting"
+            accessibilityRole="button"
+            accessibilityState={{ expanded: isSortMenuOpen }}
+            className="ml-auto"
+            hitSlop={8}
+            onPress={() => setIsSortMenuOpen((isOpen) => !isOpen)}
+          >
+            <SortIcon />
+          </PressEffect>
+        ) : null}
       </View>
 
-      {isSortMenuOpen && (
+      {showSort && isSortMenuOpen && (
         <SortMenu
           onSelect={handleSortChange}
           selectedSort={selectedSort}

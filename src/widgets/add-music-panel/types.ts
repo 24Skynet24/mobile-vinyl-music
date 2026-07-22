@@ -1,3 +1,4 @@
 export interface AddMusicPanelProps {
-    onClose: () => void
+  onClose: () => void;
+  onImportComplete: () => void;
 }

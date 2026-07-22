@@ -1,4 +1,5 @@
 import { usePanelNavigation } from '@/features/panel-navigation';
+import type { SortType } from '@/shared/ui/search-toolbar';
 import { GradientBackground } from '@/shared/ui/gradient-background';
 import { MenuTrigger } from '@/shared/ui/menu-trigger';
 import { AddMusicPanel } from '@/widgets/add-music-panel/ui/add-music-panel';
@@ -6,10 +7,15 @@ import { BottomMenu } from '@/widgets/bottom-menu';
 import { MusicPanel } from '@/widgets/music-panel';
 import { Player } from '@/widgets/player';
 import { PlaylistPanel } from '@/widgets/playlist-panel';
+import { useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function HomePage() {
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(
+    null,
+  );
+  const [musicSort, setMusicSort] = useState<SortType>('date-added');
   const {
     activePanel,
     closeAllPanels,
@@ -34,15 +40,16 @@ export function HomePage() {
           <BottomMenu
             onActionPress={(action) => {
               if (action === 'all-music') {
+                setSelectedPlaylistId(null);
                 openPanel('music');
                 return;
               }
-              else if (action === 'playlist') {
-                openPanel("playlist")
+              if (action === 'playlist') {
+                openPanel('playlist');
                 return;
               }
-              else if (action === 'add-music') {
-                openPanel("add-music")
+              if (action === 'add-music') {
+                openPanel('add-music');
                 return;
               }
 
@@ -53,13 +60,27 @@ export function HomePage() {
         )}
 
         {activePanel === 'music' && (
-          <MusicPanel onClose={closeCurrentPanel} />
+          <MusicPanel
+            onClose={closeCurrentPanel}
+            onSortChange={setMusicSort}
+            playlistId={selectedPlaylistId}
+            sort={musicSort}
+          />
         )}
         {activePanel === 'playlist' && (
-          <PlaylistPanel onClose={closeCurrentPanel} />
+          <PlaylistPanel
+            onClose={closeCurrentPanel}
+            onOpenPlaylist={(playlistId) => {
+              setSelectedPlaylistId(playlistId);
+              openPanel('music');
+            }}
+          />
         )}
         {activePanel === 'add-music' && (
-          <AddMusicPanel onClose={closeCurrentPanel} />
+          <AddMusicPanel
+            onClose={closeCurrentPanel}
+            onImportComplete={closeAllPanels}
+          />
         )}
       </View>
     </GradientBackground>

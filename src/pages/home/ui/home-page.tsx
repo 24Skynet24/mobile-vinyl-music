@@ -4,6 +4,7 @@ import { GradientBackground } from '@/shared/ui/gradient-background';
 import { MenuTrigger } from '@/shared/ui/menu-trigger';
 import { AddMusicPanel } from '@/widgets/add-music-panel';
 import { BottomMenu } from '@/widgets/bottom-menu';
+import { EqualizerPanel } from '@/widgets/equalizer-panel';
 import { MusicPanel } from '@/widgets/music-panel';
 import { Player } from '@/widgets/player';
 import { PlaylistPanel } from '@/widgets/playlist-panel';
@@ -52,6 +53,10 @@ export function HomePage() {
                 openPanel('add-music');
                 return;
               }
+              if (action === 'equalizer') {
+                openPanel('equalizer');
+                return;
+              }
 
               closeAllPanels();
             }}
@@ -81,6 +86,9 @@ export function HomePage() {
             onClose={closeCurrentPanel}
             onImportComplete={closeAllPanels}
           />
+        )}
+        {activePanel === 'equalizer' && (
+          <EqualizerPanel onClose={closeCurrentPanel} />
         )}
       </View>
     </GradientBackground>

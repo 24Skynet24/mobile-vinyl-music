@@ -1,4 +1,4 @@
-import type { SortType } from '@/shared/ui/search-toolbar';
+import type { SortType } from "@/shared/ui/search-toolbar";
 
 export interface MusicPanelProps {
   onClose: () => void;

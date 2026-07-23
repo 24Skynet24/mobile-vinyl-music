@@ -1,1 +1,1 @@
-export { MusicPanel } from './ui/music-panel';
+export { MusicPanel } from "./ui/music-panel";

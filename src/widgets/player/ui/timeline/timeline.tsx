@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { TextBebas } from '@/shared/ui/text';
@@ -31,6 +31,10 @@ export function Timeline({
 }: TimelineProps) {
   const [trackWidth, setTrackWidth] = useState(0);
   const [dragValue, setDragValue] = useState<number | null>(null);
+  const touchHandledRef = useRef(false);
+  const touchResetTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const displayedTime = dragValue ?? currentTime;
   const progress = duration > 0 ? Math.min(displayedTime / duration, 1) : 0;
 
@@ -41,6 +45,25 @@ export function Timeline({
     return Math.max(0, Math.min(offset / trackWidth, 1)) * duration;
   };
 
+  useEffect(() => {
+    return () => {
+      if (touchResetTimeoutRef.current) {
+        clearTimeout(touchResetTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const markTouchHandled = () => {
+    touchHandledRef.current = true;
+    if (touchResetTimeoutRef.current) {
+      clearTimeout(touchResetTimeoutRef.current);
+    }
+    touchResetTimeoutRef.current = setTimeout(() => {
+      touchHandledRef.current = false;
+      touchResetTimeoutRef.current = null;
+    }, 500);
+  };
+
   return (
     <View className="w-full flex flex-col gap-2">
       <Pressable
@@ -49,11 +72,19 @@ export function Timeline({
         disabled={disabled || duration <= 0}
         hitSlop={12}
         onLayout={(event) => setTrackWidth(event.nativeEvent.layout.width)}
-        onPress={(event) => onSeek(timeFromOffset(event.nativeEvent.locationX))}
+        onPress={(event) => {
+          if (touchHandledRef.current) {
+            touchHandledRef.current = false;
+            return;
+          }
+
+          onSeek(timeFromOffset(event.nativeEvent.locationX));
+        }}
         onTouchMove={(event) =>
           setDragValue(timeFromOffset(event.nativeEvent.locationX))
         }
         onTouchEnd={(event) => {
+          markTouchHandled();
           onSeek(timeFromOffset(event.nativeEvent.locationX));
           setDragValue(null);
         }}

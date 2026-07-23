@@ -2,7 +2,7 @@ import { usePanelNavigation } from '@/features/panel-navigation';
 import type { SortType } from '@/shared/ui/search-toolbar';
 import { GradientBackground } from '@/shared/ui/gradient-background';
 import { MenuTrigger } from '@/shared/ui/menu-trigger';
-import { AddMusicPanel } from '@/widgets/add-music-panel/ui/add-music-panel';
+import { AddMusicPanel } from '@/widgets/add-music-panel';
 import { BottomMenu } from '@/widgets/bottom-menu';
 import { MusicPanel } from '@/widgets/music-panel';
 import { Player } from '@/widgets/player';

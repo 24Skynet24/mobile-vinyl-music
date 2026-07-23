@@ -6,7 +6,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 
-import { AppProviders } from '@/providers/app-providers';
+import { AppProviders } from '@/providers';
 
 void SplashScreen.preventAutoHideAsync();
 

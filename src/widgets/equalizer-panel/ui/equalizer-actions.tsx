@@ -2,19 +2,36 @@ import { Pressable, View } from 'react-native';
 
 import { TextBebas } from '@/shared/ui/text';
 
-const actions = ['Create preset', 'Presets', 'Save'];
+type EqualizerActionsProps = {
+  onCreatePreset: () => void;
+  onOpenPresets: () => void;
+  onSavePreset: () => void;
+  showSave: boolean;
+};
 
-export function EqualizerActions() {
+export function EqualizerActions({
+  onCreatePreset,
+  onOpenPresets,
+  onSavePreset,
+  showSave,
+}: EqualizerActionsProps) {
+  const actions = [
+    { label: 'Create preset', onPress: onCreatePreset, visible: true },
+    { label: 'Presets', onPress: onOpenPresets, visible: true },
+    { label: 'Save', onPress: onSavePreset, visible: showSave },
+  ];
+
   return (
     <View className="flex-row flex-wrap justify-center gap-4">
-      {actions.map((action) => (
+      {actions.filter((action) => action.visible).map((action) => (
         <Pressable
           accessibilityRole="button"
-          className="border border-orange-main bg-black-main active:opacity-70 px-4 py-2 rounded-[4px]"
-          key={action}
+          className="rounded-[4px] border border-orange-main bg-black-main px-4 py-2 active:opacity-70"
+          key={action.label}
+          onPress={action.onPress}
         >
           <TextBebas className="text-[18px] uppercase text-white-main">
-            {action}
+            {action.label}
           </TextBebas>
         </Pressable>
       ))}

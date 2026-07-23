@@ -198,7 +198,7 @@ export function PlaylistPanel({
           onPress={() => setEditor(null)}
         >
           <Pressable
-            className="w-full max-w-[420px] gap-4 border-2 border-orange-main bg-black-main p-5"
+            className="flex flex-col items-center w-full gap-4 border-2 border-orange-main bg-black-main p-5"
             onPress={(event) => event.stopPropagation()}
           >
             <TextBebas className="text-[28px] text-orange-main">
@@ -206,7 +206,7 @@ export function PlaylistPanel({
             </TextBebas>
 
             <TextInput
-              className="border border-gray-main px-3 py-3 font-futura text-[16px] text-white-main"
+              className="border border-gray-main px-3 py-3 font-futura text-[16px] text-white-main w-full"
               onChangeText={(title) =>
                 setEditor((current) => (current ? { ...current, title } : current))
               }
@@ -215,7 +215,7 @@ export function PlaylistPanel({
               value={editor?.title}
             />
             <TextInput
-              className="min-h-24 border border-gray-main px-3 py-3 font-futura text-[16px] text-white-main"
+              className="min-h-24 border border-gray-main px-3 py-3 font-futura text-[16px] text-white-main w-full"
               multiline
               onChangeText={(description) =>
                 setEditor((current) =>
@@ -228,21 +228,13 @@ export function PlaylistPanel({
               value={editor?.description}
             />
 
-            <View style={{ height: 120, width: 120 }}>
+            <Pressable className='w-[120px] h-[120px]' onPress={() => selectCover()}>
               <CoverImage
                 fallbackSource={defaultPlaylistCover}
                 uri={editor?.coverUri}
               />
-            </View>
-
-            <Pressable
-              className="border border-white-main px-4 py-3 active:bg-orange-main"
-              onPress={() => void selectCover()}
-            >
-              <TextFutura className="text-[15px] text-white-main">
-                {editor?.coverUri ? 'Change cover photo' : 'Choose cover photo'}
-              </TextFutura>
             </Pressable>
+
 
             <View className="flex-row justify-end gap-3 pt-2">
               <Pressable className="px-4 py-3" onPress={() => setEditor(null)}>

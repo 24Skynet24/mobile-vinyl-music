@@ -1,12 +1,15 @@
 import type { PropsWithChildren } from 'react';
 
+import { EqualizerProvider } from '@/entities/equalizer';
 import { LibraryProvider } from '@/entities/library';
 import { PlaybackProvider } from '@/entities/playback';
 
 export function AppProviders({ children }: PropsWithChildren) {
   return (
     <LibraryProvider>
-      <PlaybackProvider>{children}</PlaybackProvider>
+      <EqualizerProvider>
+        <PlaybackProvider>{children}</PlaybackProvider>
+      </EqualizerProvider>
     </LibraryProvider>
   );
 }

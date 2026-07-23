@@ -1,40 +1,29 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
-import { areBandsEqual, cloneBands } from '../lib/presets';
-import { equalizerBands } from './equalizer-bands';
-import { defaultPresets } from './presets';
+import {
+  useEqualizer as useEqualizerState,
+} from '@/entities/equalizer';
+
 import type { EqualizerPanelView, EqualizerPreset } from './types';
 
 export function useEqualizer() {
-  const nextCustomPresetId = useRef(1);
-  const [bands, setBands] = useState(() => cloneBands(equalizerBands));
-  const [customPresets, setCustomPresets] = useState<EqualizerPreset[]>([]);
-  const [selectedPresetId, setSelectedPresetId] =
-    useState<string>('default-flat');
+  const {
+    bands,
+    createPreset: createEqualizerPreset,
+    customPresets,
+    defaultPresets,
+    deleteCustomPresets,
+    hasUnsavedChanges,
+    saveSelectedPreset,
+    selectPreset: selectEqualizerPreset,
+    selectedPresetId,
+    updateBandGain,
+  } = useEqualizerState();
   const [view, setView] = useState<EqualizerPanelView>('equalizer');
   const [isEditingPresets, setIsEditingPresets] = useState(false);
   const [presetIdsToDelete, setPresetIdsToDelete] = useState<string[]>([]);
   const [isCreatePresetOpen, setIsCreatePresetOpen] = useState(false);
   const [presetName, setPresetName] = useState('');
-  const presets = [...defaultPresets, ...customPresets];
-  const selectedPreset = presets.find(
-    (preset) => preset.id === selectedPresetId,
-  );
-  const hasUnsavedChanges =
-    selectedPreset?.kind === 'custom' &&
-    !areBandsEqual(bands, selectedPreset.bands);
-
-  const updateBandGain = (frequency: string, gain: number) => {
-    if (selectedPreset?.kind === 'default') {
-      setSelectedPresetId('');
-    }
-
-    setBands((currentBands) =>
-      currentBands.map((band) =>
-        band.frequency === frequency ? { ...band, gain } : band,
-      ),
-    );
-  };
 
   const openPresetList = () => setView('presets');
 
@@ -56,8 +45,7 @@ export function useEqualizer() {
       return;
     }
 
-    setSelectedPresetId(preset.id);
-    setBands(cloneBands(preset.bands));
+    selectEqualizerPreset(preset);
   };
 
   const togglePresetSettings = () => {
@@ -70,14 +58,7 @@ export function useEqualizer() {
       return;
     }
 
-    setCustomPresets((currentPresets) =>
-      currentPresets.filter(
-        (preset) => !presetIdsToDelete.includes(preset.id),
-      ),
-    );
-    if (presetIdsToDelete.includes(selectedPresetId)) {
-      setSelectedPresetId('');
-    }
+    deleteCustomPresets(presetIdsToDelete);
     setPresetIdsToDelete([]);
   };
 
@@ -92,36 +73,12 @@ export function useEqualizer() {
   };
 
   const createPreset = () => {
-    const name = presetName.trim();
-    if (!name) {
+    if (!presetName.trim()) {
       return;
     }
 
-    const id = `custom-${nextCustomPresetId.current}`;
-    const preset: EqualizerPreset = {
-      bands: cloneBands(bands),
-      id,
-      kind: 'custom',
-      name,
-    };
-    nextCustomPresetId.current += 1;
-    setCustomPresets((currentPresets) => [...currentPresets, preset]);
-    setSelectedPresetId(id);
+    createEqualizerPreset(presetName);
     closeCreatePreset();
-  };
-
-  const saveSelectedPreset = () => {
-    if (selectedPreset?.kind !== 'custom' || !hasUnsavedChanges) {
-      return;
-    }
-
-    setCustomPresets((currentPresets) =>
-      currentPresets.map((preset) =>
-        preset.id === selectedPreset.id
-          ? { ...preset, bands: cloneBands(bands) }
-          : preset,
-      ),
-    );
   };
 
   return {

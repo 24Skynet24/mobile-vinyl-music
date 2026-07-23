@@ -1,8 +1,3 @@
-import {
-  setAudioModeAsync,
-  useAudioPlayer,
-  useAudioPlayerStatus,
-} from 'expo-audio';
 import type { PropsWithChildren } from 'react';
 import {
   createContext,
@@ -15,15 +10,18 @@ import {
 } from 'react';
 import { AppState } from 'react-native';
 
+import { useEqualizer } from '@/entities/equalizer';
 import { useLibrary } from '@/entities/library';
 import type { Track } from '@/entities/track';
 
+import type { PlaybackAudioEngineHandle } from './audio-engine-types';
 import type { RepeatMode } from './types';
 import {
   clearPlaybackState,
   loadPlaybackState,
   savePlaybackState,
 } from './playback-storage';
+import { PlaybackAudioEngine } from '../ui/playback-audio-engine';
 
 type PlaybackContextValue = {
   currentTrack: Track | null;
@@ -58,38 +56,61 @@ type PendingRestore = {
   trackId: string;
 };
 
+type PlaybackAudioStatus = {
+  currentTime: number;
+  duration: number;
+  isBuffering: boolean;
+  isLoaded: boolean;
+  playing: boolean;
+};
+
 export function PlaybackProvider({ children }: PropsWithChildren) {
+  const { bands } = useEqualizer();
   const {
     isHydrated: isLibraryHydrated,
     tracks,
     updateTrackDuration,
   } = useLibrary();
-  const player = useAudioPlayer(null, { updateInterval: 250 });
-  const status = useAudioPlayerStatus(player);
+  const audioEngineRef = useRef<PlaybackAudioEngineHandle>(null);
+  const [status, setStatus] = useState<PlaybackAudioStatus>({
+    currentTime: 0,
+    duration: 0,
+    isBuffering: false,
+    isLoaded: false,
+    playing: false,
+  });
   const [queueIds, setQueueIds] = useState<string[]>([]);
   const [currentTrackId, setCurrentTrackId] = useState<string | null>(null);
+  const [sourceRevision, setSourceRevision] = useState(0);
+  const [shouldPlayOnLoad, setShouldPlayOnLoad] = useState(false);
+  const [endedSequence, setEndedSequence] = useState(0);
   const [randomEnabled, setRandomEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('none');
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [cyclePlayedIds, setCyclePlayedIds] = useState<string[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
-  const didJustFinishRef = useRef(false);
   const currentPositionRef = useRef(0);
   const currentTrackIdRef = useRef<string | null>(null);
   const hasUserSelectedTrackRef = useRef(false);
   const isApplyingRestoreRef = useRef(false);
   const isWaitingForTrackResetRef = useRef(false);
   const pendingRestoreRef = useRef<PendingRestore | null>(null);
+  const handledEndedSequenceRef = useRef(0);
 
   const currentTrack =
     tracks.find((track) => track.id === currentTrackId) ?? null;
 
-  useEffect(() => {
-    void setAudioModeAsync({
-      playsInSilentMode: true,
-      interruptionMode: 'doNotMix',
-    });
+  const playAudio = useCallback(() => {
+    audioEngineRef.current?.play();
+  }, []);
+
+  const pauseAudio = useCallback(() => {
+    audioEngineRef.current?.pause();
+  }, []);
+
+  const seekAudio = useCallback((seconds: number) => {
+    return audioEngineRef.current?.seekTo(seconds) ?? Promise.resolve();
   }, []);
 
   useEffect(() => {
@@ -124,8 +145,16 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
         setHistoryIndex(0);
         setCyclePlayedIds([savedTrack.id]);
         setCurrentTrackId(savedTrack.id);
-        player.pause();
-        player.replace({ uri: savedTrack.uri });
+        audioEngineRef.current?.pause();
+        setStatus({
+          currentTime: 0,
+          duration: savedTrack.duration,
+          isBuffering: true,
+          isLoaded: false,
+          playing: false,
+        });
+        setShouldPlayOnLoad(false);
+        setSourceRevision((revision) => revision + 1);
       } else if (savedState) {
         void clearPlaybackState();
       }
@@ -136,7 +165,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
     return () => {
       isCancelled = true;
     };
-  }, [isHydrated, isLibraryHydrated, player, tracks]);
+  }, [isHydrated, isLibraryHydrated, tracks]);
 
   useEffect(() => {
     const pendingRestore = pendingRestoreRef.current;
@@ -155,8 +184,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       : pendingRestore.position;
 
     isApplyingRestoreRef.current = true;
-    void player
-      .seekTo(restoredPosition)
+    void seekAudio(restoredPosition)
       .then(() => {
         if (pendingRestoreRef.current !== pendingRestore) {
           return;
@@ -182,7 +210,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
   }, [
     currentTrack?.duration,
     currentTrackId,
-    player,
+    seekAudio,
     status.duration,
     status.isLoaded,
   ]);
@@ -252,8 +280,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      player.pause();
-      player.replace({ uri: track.uri });
+      pauseAudio();
       hasUserSelectedTrackRef.current = true;
       pendingRestoreRef.current = null;
       isApplyingRestoreRef.current = false;
@@ -261,13 +288,18 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       currentTrackIdRef.current = trackId;
       currentPositionRef.current = 0;
       setCurrentTrackId(trackId);
+      setStatus({
+        currentTime: 0,
+        duration: track.duration,
+        isBuffering: true,
+        isLoaded: false,
+        playing: false,
+      });
+      setShouldPlayOnLoad(shouldPlay);
+      setSourceRevision((revision) => revision + 1);
       void savePlaybackState({ position: 0, trackId });
-
-      if (shouldPlay) {
-        player.play();
-      }
     },
-    [player, tracks],
+    [pauseAudio, tracks],
   );
 
   const playTrack = useCallback(
@@ -296,8 +328,8 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       }
 
       if (automatic && repeatMode === 'one') {
-        void player.seekTo(0);
-        player.play();
+        void seekAudio(0);
+        playAudio();
         return;
       }
 
@@ -321,8 +353,8 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
 
         if (candidates.length === 0) {
           if (queueIds.length === 1 && repeatMode === 'all') {
-            void player.seekTo(0);
-            player.play();
+            void seekAudio(0);
+            playAudio();
           }
           return;
         }
@@ -352,16 +384,17 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       cyclePlayedIds,
       history,
       historyIndex,
-      player,
+      playAudio,
       queueIds,
       randomEnabled,
       repeatMode,
+      seekAudio,
     ],
   );
 
   const previousTrack = useCallback(() => {
     if (status.currentTime > 3) {
-      void player.seekTo(0);
+      void seekAudio(0);
       return;
     }
 
@@ -371,7 +404,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
         setHistoryIndex(previousHistoryIndex);
         activateTrack(history[previousHistoryIndex]);
       } else {
-        void player.seekTo(0);
+        void seekAudio(0);
       }
       return;
     }
@@ -386,17 +419,17 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
     } else if (repeatMode === 'all') {
       activateTrack(queueIds.at(-1)!);
     } else {
-      void player.seekTo(0);
+      void seekAudio(0);
     }
   }, [
     activateTrack,
     currentTrackId,
     history,
     historyIndex,
-    player,
     queueIds,
     randomEnabled,
     repeatMode,
+    seekAudio,
     status.currentTime,
   ]);
 
@@ -409,22 +442,30 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
     }
 
     if (status.playing) {
-      player.pause();
+      pauseAudio();
       return;
     }
 
     if (status.duration > 0 && status.currentTime >= status.duration - 0.1) {
-      void player.seekTo(0);
+      void seekAudio(0);
     }
-    player.play();
-  }, [currentTrack, playTrack, player, status, tracks]);
+    playAudio();
+  }, [
+    currentTrack,
+    pauseAudio,
+    playAudio,
+    playTrack,
+    seekAudio,
+    status,
+    tracks,
+  ]);
 
   const seekTo = useCallback(
     (seconds: number) => {
       const safeDuration = status.duration || currentTrack?.duration || 0;
-      void player.seekTo(Math.max(0, Math.min(seconds, safeDuration)));
+      void seekAudio(Math.max(0, Math.min(seconds, safeDuration)));
     },
-    [currentTrack?.duration, player, status.duration],
+    [currentTrack?.duration, seekAudio, status.duration],
   );
 
   const toggleRandom = useCallback(() => {
@@ -454,16 +495,18 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
   }, [currentTrackId, status.duration, updateTrackDuration]);
 
   useEffect(() => {
-    if (status.didJustFinish && !didJustFinishRef.current && currentTrackId) {
+    if (
+      endedSequence > handledEndedSequenceRef.current &&
+      currentTrackId
+    ) {
+      handledEndedSequenceRef.current = endedSequence;
       goNext(true);
     }
-    didJustFinishRef.current = status.didJustFinish;
-  }, [currentTrackId, goNext, status.didJustFinish]);
+  }, [currentTrackId, endedSequence, goNext]);
 
   useEffect(() => {
     if (currentTrackId && !currentTrack) {
-      player.pause();
-      player.replace(null);
+      pauseAudio();
       currentTrackIdRef.current = null;
       currentPositionRef.current = 0;
       pendingRestoreRef.current = null;
@@ -471,7 +514,70 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       setCurrentTrackId(null);
       void clearPlaybackState();
     }
-  }, [currentTrack, currentTrackId, player]);
+  }, [currentTrack, currentTrackId, pauseAudio]);
+
+  const handleAudioLoading = useCallback(() => {
+    setStatus((current) => ({
+      ...current,
+      isBuffering: true,
+      isLoaded: false,
+      playing: false,
+    }));
+  }, []);
+
+  const handleAudioLoaded = useCallback(() => {
+    setStatus((current) => ({
+      ...current,
+      isBuffering: false,
+      isLoaded: true,
+    }));
+  }, []);
+
+  const handleAudioDurationChange = useCallback((duration: number) => {
+    if (!Number.isFinite(duration) || duration < 0) {
+      return;
+    }
+
+    setStatus((current) => ({ ...current, duration }));
+  }, []);
+
+  const handleAudioPositionChange = useCallback((currentTime: number) => {
+    if (!Number.isFinite(currentTime) || currentTime < 0) {
+      return;
+    }
+
+    setStatus((current) => ({ ...current, currentTime }));
+  }, []);
+
+  const handleAudioPlay = useCallback(() => {
+    setStatus((current) => ({
+      ...current,
+      isBuffering: false,
+      playing: true,
+    }));
+  }, []);
+
+  const handleAudioPause = useCallback(() => {
+    setStatus((current) => ({ ...current, playing: false }));
+  }, []);
+
+  const handleAudioEnded = useCallback(() => {
+    setStatus((current) => ({
+      ...current,
+      currentTime: current.duration,
+      playing: false,
+    }));
+    setEndedSequence((sequence) => sequence + 1);
+  }, []);
+
+  const handleAudioError = useCallback((_error: Error) => {
+    setStatus((current) => ({
+      ...current,
+      isBuffering: false,
+      isLoaded: false,
+      playing: false,
+    }));
+  }, []);
 
   const value = useMemo<PlaybackContextValue>(
     () => ({
@@ -510,7 +616,26 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
     ],
   );
 
-  return <PlaybackContext value={value}>{children}</PlaybackContext>;
+  return (
+    <PlaybackContext value={value}>
+      <PlaybackAudioEngine
+        bands={bands}
+        onDurationChange={handleAudioDurationChange}
+        onEnded={handleAudioEnded}
+        onError={handleAudioError}
+        onLoaded={handleAudioLoaded}
+        onLoading={handleAudioLoading}
+        onPause={handleAudioPause}
+        onPlay={handleAudioPlay}
+        onPositionChange={handleAudioPositionChange}
+        ref={audioEngineRef}
+        shouldPlayOnLoad={shouldPlayOnLoad}
+        source={currentTrack?.uri ?? ''}
+        sourceRevision={sourceRevision}
+      />
+      {children}
+    </PlaybackContext>
+  );
 }
 
 export function usePlayback() {

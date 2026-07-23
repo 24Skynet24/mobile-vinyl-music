@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { LayoutChangeEvent, View } from 'react-native';
 
 import {
@@ -24,8 +24,35 @@ export function useEqualizerSlider({
 }: UseEqualizerSliderOptions) {
   const trackRef = useRef<View>(null);
   const trackPageX = useRef(0);
+  const frameRequestRef = useRef<number | null>(null);
+  const pendingGainRef = useRef<number | null>(null);
   const [trackWidth, setTrackWidth] = useState(0);
   const progressWidth = gainToProgressWidth(gain);
+
+  useEffect(() => {
+    return () => {
+      if (frameRequestRef.current !== null) {
+        cancelAnimationFrame(frameRequestRef.current);
+      }
+    };
+  }, []);
+
+  const scheduleGainChange = (nextGain: number) => {
+    pendingGainRef.current = nextGain;
+    if (frameRequestRef.current !== null) {
+      return;
+    }
+
+    frameRequestRef.current = requestAnimationFrame(() => {
+      frameRequestRef.current = null;
+      const pendingGain = pendingGainRef.current;
+      pendingGainRef.current = null;
+
+      if (pendingGain !== null) {
+        onGainChange(pendingGain);
+      }
+    });
+  };
 
   const getPointerOffset = ({
     locationX,
@@ -46,7 +73,7 @@ export function useEqualizerSlider({
     );
 
     if (nextGain !== null) {
-      onGainChange(nextGain);
+      scheduleGainChange(nextGain);
     }
   };
 

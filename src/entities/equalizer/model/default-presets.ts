@@ -1,4 +1,4 @@
-import { createBands } from '../lib/presets';
+import { createBands } from '../lib/bands';
 import type { EqualizerPreset } from './types';
 
 export const defaultPresets: EqualizerPreset[] = [

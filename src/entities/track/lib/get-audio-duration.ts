@@ -6,11 +6,16 @@ export function getAudioDuration(uri: string) {
   return new Promise<number>((resolve) => {
     const player = createAudioPlayer(
       { uri },
-      { keepAudioSessionActive: false, updateInterval: 100 },
+      {
+        keepAudioSessionActive: false,
+        updateInterval: 100,
+      },
     );
     let isSettled = false;
+    let subscription:
+      | ReturnType<typeof player.addListener>
+      | undefined;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    let subscription: ReturnType<typeof player.addListener> | undefined;
 
     const finish = (duration: number) => {
       if (isSettled) {
@@ -34,7 +39,10 @@ export function getAudioDuration(uri: string) {
         }
       },
     );
-    timeoutId = setTimeout(() => finish(player.duration), DURATION_TIMEOUT_MS);
+    timeoutId = setTimeout(
+      () => finish(player.duration),
+      DURATION_TIMEOUT_MS,
+    );
 
     if (player.isLoaded && player.duration > 0) {
       finish(player.duration);

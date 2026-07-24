@@ -9,7 +9,7 @@ import { metadataFromAsset } from "../lib/track-metadata";
 import type { MetadataEditor, PendingTrack } from "./types";
 
 export function useAddMusic(onImportComplete: () => void) {
-  const { addTracks } = useLibrary();
+  const { addTracks, tracks } = useLibrary();
   const [pendingTracks, setPendingTracks] = useState<PendingTrack[]>([]);
   const [metadataEditor, setMetadataEditor] = useState<MetadataEditor | null>(
     null,
@@ -36,13 +36,24 @@ export function useAddMusic(onImportComplete: () => void) {
 
     setPendingTracks((current) => {
       const existing = new Set(
-        current.map(({ asset }) => `${asset.name}:${asset.size}`),
+        [
+          ...tracks.map((track) => track.fileName),
+          ...current.map(({ asset }) => asset.name),
+        ].map((fileName) => fileName.trim().toLocaleLowerCase()),
       );
       return [
         ...current,
-        ...selectedTracks.filter(
-          ({ asset }) => !existing.has(`${asset.name}:${asset.size}`),
-        ),
+        ...selectedTracks.filter(({ asset }) => {
+          const fileName = asset.name
+            .trim()
+            .toLocaleLowerCase();
+          if (existing.has(fileName)) {
+            return false;
+          }
+
+          existing.add(fileName);
+          return true;
+        }),
       ];
     });
 
@@ -71,10 +82,24 @@ export function useAddMusic(onImportComplete: () => void) {
     }
 
     setIsSaving(true);
+    const existingFileNames = new Set(
+      tracks.map((track) =>
+        track.fileName.trim().toLocaleLowerCase(),
+      ),
+    );
+    const tracksToImport = pendingTracks.filter(({ asset }) => {
+      const fileName = asset.name.trim().toLocaleLowerCase();
+      if (existingFileNames.has(fileName)) {
+        return false;
+      }
+
+      existingFileNames.add(fileName);
+      return true;
+    });
     const importedTracks = [];
     const failedTracks: PendingTrack[] = [];
 
-    for (const pendingTrack of pendingTracks) {
+    for (const pendingTrack of tracksToImport) {
       try {
         importedTracks.push(
           persistAudioAsset(
@@ -102,7 +127,11 @@ export function useAddMusic(onImportComplete: () => void) {
     } else {
       Alert.alert(
         "Music added",
-        `${importedTracks.length} track(s) are now in your library.`,
+        `${importedTracks.length} track(s) are now in your library.${
+          tracksToImport.length < pendingTracks.length
+            ? " Duplicate files were skipped."
+            : ""
+        }`,
       );
     }
 

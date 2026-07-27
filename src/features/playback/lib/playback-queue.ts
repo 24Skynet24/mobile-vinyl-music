@@ -5,6 +5,11 @@ export type ShuffleHistory = {
   index: number;
 };
 
+type QueueAfterRemoval = {
+  nextQueueIds: string[];
+  nextTrackId: string | null;
+};
+
 type ShuffleCandidatesParams = {
   currentTrackId: string;
   cyclePlayedIds: string[];
@@ -17,6 +22,48 @@ export function getDefaultQueueIds(tracks: Track[]) {
   return [...tracks]
     .sort((left, right) => right.addedAt - left.addedAt)
     .map((track) => track.id);
+}
+
+function getNextId(queueIds: string[], removedTrackId: string) {
+  if (queueIds.length === 0) {
+    return null;
+  }
+
+  const removedIndex = queueIds.indexOf(removedTrackId);
+  if (removedIndex < 0) {
+    return queueIds[0];
+  }
+
+  return queueIds[(removedIndex + 1) % queueIds.length];
+}
+
+export function getQueueAfterRemoval(
+  removedTrackId: string,
+  sourceQueueIds: string[],
+  defaultQueueIds: string[],
+): QueueAfterRemoval {
+  const sourceNextTrackId = getNextId(sourceQueueIds, removedTrackId);
+  const sourceQueueWithoutRemoved = sourceQueueIds.filter(
+    (id) => id !== removedTrackId,
+  );
+
+  if (sourceNextTrackId && sourceNextTrackId !== removedTrackId) {
+    return {
+      nextQueueIds: sourceQueueWithoutRemoved,
+      nextTrackId: sourceNextTrackId,
+    };
+  }
+
+  const defaultNextTrackId = getNextId(defaultQueueIds, removedTrackId);
+  const defaultQueueWithoutRemoved = defaultQueueIds.filter(
+    (id) => id !== removedTrackId,
+  );
+
+  return {
+    nextQueueIds: defaultQueueWithoutRemoved,
+    nextTrackId:
+      defaultNextTrackId === removedTrackId ? null : defaultNextTrackId,
+  };
 }
 
 export function reconcileQueueIds(

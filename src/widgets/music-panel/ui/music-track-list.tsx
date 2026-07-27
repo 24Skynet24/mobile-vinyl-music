@@ -11,7 +11,7 @@ type MusicTrackListProps = {
   tracks: Track[];
   onAdd: (track: Track) => void;
   onPlay: (trackId: string, queueIds: string[]) => void;
-  onRemove: (track: Track) => void;
+  onRemove: (track: Track, queueIds: string[]) => void;
 };
 
 export function MusicTrackList({
@@ -55,7 +55,7 @@ export function MusicTrackList({
           isRemove
           onAdd={() => onAdd(item)}
           onPress={() => onPlay(item.id, queueIds)}
-          onRemove={() => onRemove(item)}
+          onRemove={() => onRemove(item, queueIds)}
           subtitle={[item.artist, item.album].filter(Boolean).join(" · ")}
           title={item.title}
         />

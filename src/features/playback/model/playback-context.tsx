@@ -16,6 +16,7 @@ import type { Track } from "@/entities/track";
 
 import {
   getDefaultQueueIds,
+  getQueueAfterRemoval,
   getShuffleCandidates,
   hasSingleUniqueTrack,
   reconcileQueueIds,
@@ -41,6 +42,10 @@ type PlaybackContextValue = {
   randomEnabled: boolean;
   repeatMode: RepeatMode;
   playTrack: (trackId: string, queueIds?: string[]) => void;
+  selectTrackAfterRemoval: (
+    trackId: string,
+    sourceQueueIds: string[],
+  ) => void;
   togglePlayback: () => void;
   nextTrack: () => void;
   previousTrack: () => void;
@@ -125,21 +130,6 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
   const seekAudio = useCallback((seconds: number) => {
     return audioEngineRef.current?.seekTo(seconds) ?? Promise.resolve();
   }, []);
-
-  useEffect(() => {
-    const previousLibraryIds = previousLibraryTrackIdsRef.current;
-    const nextLibraryIds = tracks.map((track) => track.id);
-    const nextLibraryIdSet = new Set(nextLibraryIds);
-
-    setQueueIds((currentQueue) =>
-      reconcileQueueIds(currentQueue, previousLibraryIds, tracks),
-    );
-    setShuffleHistory((currentHistory) =>
-      reconcileShuffleHistory(currentHistory, nextLibraryIdSet),
-    );
-
-    previousLibraryTrackIdsRef.current = nextLibraryIds;
-  }, [tracks]);
 
   useEffect(() => {
     if (status.currentTime <= 0.25) {
@@ -336,6 +326,64 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
     [pauseAudio, tracks],
   );
 
+  const deactivateTrack = useCallback(() => {
+    pauseAudio();
+    pendingRestoreRef.current = null;
+    isApplyingRestoreRef.current = false;
+    isWaitingForTrackResetRef.current = false;
+    previousRestartPendingRef.current = false;
+    currentTrackIdRef.current = null;
+    currentPositionRef.current = 0;
+    setCurrentTrackId(null);
+    setQueueIds([]);
+    setShuffleHistory({ ids: [], index: -1 });
+    setCyclePlayedIds([]);
+    setStatus({
+      currentTime: 0,
+      duration: 0,
+      isBuffering: false,
+      isLoaded: false,
+      playing: false,
+    });
+    setShouldPlayOnLoad(false);
+    setSourceRevision((revision) => revision + 1);
+    void clearPlaybackState();
+  }, [pauseAudio]);
+
+  useEffect(() => {
+    const previousLibraryIds = previousLibraryTrackIdsRef.current;
+    const nextLibraryIds = tracks.map((track) => track.id);
+    const nextLibraryIdSet = new Set(nextLibraryIds);
+
+    setQueueIds((currentQueue) =>
+      reconcileQueueIds(currentQueue, previousLibraryIds, tracks),
+    );
+    setShuffleHistory((currentHistory) =>
+      reconcileShuffleHistory(currentHistory, nextLibraryIdSet),
+    );
+
+    if (
+      isLibraryHydrated &&
+      isHydrated &&
+      previousLibraryIds.length === 0 &&
+      nextLibraryIds.length > 0 &&
+      !currentTrackIdRef.current
+    ) {
+      const firstTrackId = getDefaultQueueIds(tracks)[0];
+      setQueueIds(getDefaultQueueIds(tracks));
+      setShuffleHistory({ ids: [firstTrackId], index: 0 });
+      setCyclePlayedIds([firstTrackId]);
+      activateTrack(firstTrackId, false);
+    }
+
+    previousLibraryTrackIdsRef.current = nextLibraryIds;
+  }, [
+    activateTrack,
+    isHydrated,
+    isLibraryHydrated,
+    tracks,
+  ]);
+
   const playTrack = useCallback(
     (trackId: string, requestedQueue?: string[]) => {
       const validIds = new Set(tracks.map((track) => track.id));
@@ -352,6 +400,35 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       activateTrack(trackId);
     },
     [activateTrack, tracks],
+  );
+
+  const selectTrackAfterRemoval = useCallback(
+    (trackId: string, sourceQueueIds: string[]) => {
+      if (currentTrackIdRef.current !== trackId) {
+        return;
+      }
+
+      const validTrackIds = new Set(tracks.map((track) => track.id));
+      const validSourceQueueIds = sourceQueueIds.filter((id) =>
+        validTrackIds.has(id),
+      );
+      const { nextQueueIds, nextTrackId } = getQueueAfterRemoval(
+        trackId,
+        validSourceQueueIds,
+        getDefaultQueueIds(tracks),
+      );
+
+      if (!nextTrackId) {
+        deactivateTrack();
+        return;
+      }
+
+      setQueueIds(nextQueueIds);
+      setShuffleHistory({ ids: [nextTrackId], index: 0 });
+      setCyclePlayedIds([nextTrackId]);
+      activateTrack(nextTrackId, status.playing);
+    },
+    [activateTrack, deactivateTrack, status.playing, tracks],
   );
 
   const goNext = useCallback(
@@ -580,15 +657,30 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (currentTrackId && !currentTrack) {
-      pauseAudio();
-      currentTrackIdRef.current = null;
-      currentPositionRef.current = 0;
-      pendingRestoreRef.current = null;
-      isApplyingRestoreRef.current = false;
-      setCurrentTrackId(null);
-      void clearPlaybackState();
+      const { nextQueueIds, nextTrackId } = getQueueAfterRemoval(
+        currentTrackId,
+        queueIds,
+        getDefaultQueueIds(tracks),
+      );
+
+      if (nextTrackId) {
+        setQueueIds(nextQueueIds);
+        setShuffleHistory({ ids: [nextTrackId], index: 0 });
+        setCyclePlayedIds([nextTrackId]);
+        activateTrack(nextTrackId, status.playing);
+      } else {
+        deactivateTrack();
+      }
     }
-  }, [currentTrack, currentTrackId, pauseAudio]);
+  }, [
+    activateTrack,
+    currentTrack,
+    currentTrackId,
+    deactivateTrack,
+    queueIds,
+    status.playing,
+    tracks,
+  ]);
 
   const handleAudioLoading = useCallback(() => {
     setStatus((current) => ({
@@ -664,6 +756,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       randomEnabled,
       repeatMode,
       playTrack,
+      selectTrackAfterRemoval,
       togglePlayback,
       nextTrack,
       previousTrack,
@@ -680,6 +773,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       randomEnabled,
       repeatMode,
       seekTo,
+      selectTrackAfterRemoval,
       status.currentTime,
       status.duration,
       status.isBuffering,

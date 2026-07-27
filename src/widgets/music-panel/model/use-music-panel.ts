@@ -16,14 +16,15 @@ export function useMusicPanel(playlistId?: string | null) {
     tracks,
     updateTrackDuration,
   } = useLibrary();
-  const { currentTrack, playTrack } = usePlayback();
+  const { currentTrack, playTrack, selectTrackAfterRemoval } = usePlayback();
   const [trackToAdd, setTrackToAdd] = useState<Track | null>(null);
   const playlist = playlists.find((item) => item.id === playlistId);
 
   useTrackDurations(tracks, updateTrackDuration);
 
-  const removeMusicTrack = (track: Track) => {
+  const removeMusicTrack = (track: Track, queueIds: string[]) => {
     if (playlist) {
+      selectTrackAfterRemoval(track.id, queueIds);
       removeTrackFromPlaylist(playlist.id, track.id);
       return;
     }
@@ -36,7 +37,10 @@ export function useMusicPanel(playlistId?: string | null) {
         {
           text: "Remove",
           style: "destructive",
-          onPress: () => removeTrack(track.id),
+          onPress: () => {
+            selectTrackAfterRemoval(track.id, queueIds);
+            removeTrack(track.id);
+          },
         },
       ],
     );

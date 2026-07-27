@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Alert } from "react-native";
 
 import { useLibrary } from "@/entities/library";
-import { usePlayback } from "@/entities/playback";
 import type { Track } from "@/entities/track";
+import { usePlayback } from "@/features/playback";
 
 import { useTrackDurations } from "./use-track-durations";
 

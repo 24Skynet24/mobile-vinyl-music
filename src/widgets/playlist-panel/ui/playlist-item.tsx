@@ -28,17 +28,17 @@ export function PlaylistItem({
         <CoverImage fallbackSource={cover} uri={image} />
       </View>
 
-      <View className="flex flex-col py-2 justify-between">
+      <View className="min-w-0 flex-1 flex-col justify-between py-2">
         <View className="flex flex-col gap-2">
-          <TextBebas className="text-white-main text-[20px]">
+          <TextBebas className="text-[20px] text-white-main" numberOfLines={1}>
             {playlistTitle}
           </TextBebas>
-          <TextFutura className="text-white-main text-[16px]">
+          <TextFutura className="text-[16px] text-white-main" numberOfLines={2}>
             {playlistDescription}
           </TextFutura>
         </View>
 
-        <TextFutura className="text-white-main text-[14px] mt-auto">
+        <TextFutura className="mt-auto text-[14px] text-white-main">
           {trackCount || 0} tracks
         </TextFutura>
       </View>

@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from 'react';
+import type { PropsWithChildren } from "react";
 import {
   createContext,
   use,
@@ -7,21 +7,29 @@ import {
   useMemo,
   useRef,
   useState,
-} from 'react';
-import { AppState } from 'react-native';
+} from "react";
+import { AppState } from "react-native";
 
-import { useEqualizer } from '@/entities/equalizer';
-import { useLibrary } from '@/entities/library';
-import type { Track } from '@/entities/track';
+import { useEqualizer } from "@/entities/equalizer";
+import { useLibrary } from "@/entities/library";
+import type { Track } from "@/entities/track";
 
-import type { PlaybackAudioEngineHandle } from './audio-engine-types';
-import type { RepeatMode } from './types';
+import {
+  getDefaultQueueIds,
+  getShuffleCandidates,
+  hasSingleUniqueTrack,
+  reconcileQueueIds,
+  reconcileShuffleHistory,
+  type ShuffleHistory,
+} from "../lib/playback-queue";
+import type { PlaybackAudioEngineHandle } from "./audio-engine-types";
+import type { RepeatMode } from "./types";
 import {
   clearPlaybackState,
   loadPlaybackState,
   savePlaybackState,
-} from './playback-storage';
-import { PlaybackAudioEngine } from '../ui/playback-audio-engine';
+} from "./playback-storage";
+import { PlaybackAudioEngine } from "../ui/playback-audio-engine";
 
 type PlaybackContextValue = {
   currentTrack: Track | null;
@@ -44,9 +52,9 @@ type PlaybackContextValue = {
 const PlaybackContext = createContext<PlaybackContextValue | null>(null);
 
 const NEXT_REPEAT_MODE: Record<RepeatMode, RepeatMode> = {
-  none: 'all',
-  all: 'one',
-  one: 'none',
+  none: "all",
+  all: "one",
+  one: "none",
 };
 
 const POSITION_SAVE_INTERVAL_MS = 2_000;
@@ -64,16 +72,6 @@ type PlaybackAudioStatus = {
   isLoaded: boolean;
   playing: boolean;
 };
-
-function getDefaultQueueIds(tracks: Track[]) {
-  return [...tracks]
-    .sort((left, right) => right.addedAt - left.addedAt)
-    .map((track) => track.id);
-}
-
-function getShuffleKey(track?: Track) {
-  return track?.fileName.trim().toLocaleLowerCase() ?? '';
-}
 
 export function PlaybackProvider({ children }: PropsWithChildren) {
   const { bands } = useEqualizer();
@@ -96,9 +94,11 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
   const [shouldPlayOnLoad, setShouldPlayOnLoad] = useState(false);
   const [endedSequence, setEndedSequence] = useState(0);
   const [randomEnabled, setRandomEnabled] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<RepeatMode>('none');
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>("none");
+  const [shuffleHistory, setShuffleHistory] = useState<ShuffleHistory>({
+    ids: [],
+    index: -1,
+  });
   const [cyclePlayedIds, setCyclePlayedIds] = useState<string[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
   const currentPositionRef = useRef(0);
@@ -109,9 +109,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
   const pendingRestoreRef = useRef<PendingRestore | null>(null);
   const handledEndedSequenceRef = useRef(0);
   const previousRestartPendingRef = useRef(false);
-  const previousLibraryTrackIdsRef = useRef(
-    tracks.map((track) => track.id),
-  );
+  const previousLibraryTrackIdsRef = useRef(tracks.map((track) => track.id));
 
   const currentTrack =
     tracks.find((track) => track.id === currentTrackId) ?? null;
@@ -133,48 +131,12 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
     const nextLibraryIds = tracks.map((track) => track.id);
     const nextLibraryIdSet = new Set(nextLibraryIds);
 
-    setQueueIds((currentQueue) => {
-      const validQueue = currentQueue.filter((id) =>
-        nextLibraryIdSet.has(id),
-      );
-      const previousLibraryIdSet = new Set(previousLibraryIds);
-      const wasFullLibraryQueue =
-        previousLibraryIds.length > 0 &&
-        currentQueue.length === previousLibraryIds.length &&
-        currentQueue.every((id) => previousLibraryIdSet.has(id));
-
-      if (!wasFullLibraryQueue) {
-        return validQueue.length === currentQueue.length
-          ? currentQueue
-          : validQueue;
-      }
-
-      const previousDefaultQueue = getDefaultQueueIds(
-        tracks.filter((track) => previousLibraryIdSet.has(track.id)),
-      );
-      const wasDefaultQueueOrder = currentQueue.every(
-        (id, index) => id === previousDefaultQueue[index],
-      );
-      if (wasDefaultQueueOrder) {
-        const nextDefaultQueue = getDefaultQueueIds(tracks);
-        const queueDidNotChange = nextDefaultQueue.every(
-          (id, index) => id === currentQueue[index],
-        );
-
-        return queueDidNotChange ? currentQueue : nextDefaultQueue;
-      }
-
-      const queuedIds = new Set(validQueue);
-      const nextQueue = [
-        ...validQueue,
-        ...nextLibraryIds.filter((id) => !queuedIds.has(id)),
-      ];
-      const queueDidNotChange =
-        nextQueue.length === currentQueue.length &&
-        nextQueue.every((id, index) => id === currentQueue[index]);
-
-      return queueDidNotChange ? currentQueue : nextQueue;
-    });
+    setQueueIds((currentQueue) =>
+      reconcileQueueIds(currentQueue, previousLibraryIds, tracks),
+    );
+    setShuffleHistory((currentHistory) =>
+      reconcileShuffleHistory(currentHistory, nextLibraryIdSet),
+    );
 
     previousLibraryTrackIdsRef.current = nextLibraryIds;
   }, [tracks]);
@@ -213,8 +175,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
         currentPositionRef.current = savedState.position;
         isWaitingForTrackResetRef.current = true;
         setQueueIds(restoredQueue);
-        setHistory([savedTrack.id]);
-        setHistoryIndex(0);
+        setShuffleHistory({ ids: [savedTrack.id], index: 0 });
         setCyclePlayedIds([savedTrack.id]);
         setCurrentTrackId(savedTrack.id);
         audioEngineRef.current?.pause();
@@ -330,9 +291,9 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       POSITION_SAVE_INTERVAL_MS,
     );
     const appStateSubscription = AppState.addEventListener(
-      'change',
+      "change",
       (nextState) => {
-        if (nextState !== 'active') {
+        if (nextState !== "active") {
           persistCurrentPlayback();
         }
       },
@@ -378,16 +339,15 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
   const playTrack = useCallback(
     (trackId: string, requestedQueue?: string[]) => {
       const validIds = new Set(tracks.map((track) => track.id));
-      const nextQueue = (
-        requestedQueue ?? getDefaultQueueIds(tracks)
-      ).filter((id) => validIds.has(id));
+      const nextQueue = (requestedQueue ?? getDefaultQueueIds(tracks)).filter(
+        (id) => validIds.has(id),
+      );
       const queue = nextQueue.includes(trackId)
         ? nextQueue
         : [trackId, ...nextQueue];
 
       setQueueIds(queue);
-      setHistory([trackId]);
-      setHistoryIndex(0);
+      setShuffleHistory({ ids: [trackId], index: 0 });
       setCyclePlayedIds([trackId]);
       activateTrack(trackId);
     },
@@ -400,74 +360,47 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      if (automatic && repeatMode === 'one') {
+      if (automatic && repeatMode === "one") {
         void seekAudio(0);
         playAudio();
         return;
       }
 
       if (randomEnabled) {
-        const tracksById = new Map(
-          tracks.map((track) => [track.id, track]),
-        );
-        const currentShuffleKey = getShuffleKey(
-          tracksById.get(currentTrackId),
-        );
-
-        if (historyIndex < history.length - 1) {
-          const nextHistoryIndex = historyIndex + 1;
-          setHistoryIndex(nextHistoryIndex);
-          activateTrack(history[nextHistoryIndex]);
+        if (shuffleHistory.index < shuffleHistory.ids.length - 1) {
+          const nextHistoryIndex = shuffleHistory.index + 1;
+          setShuffleHistory((current) => ({
+            ...current,
+            index: nextHistoryIndex,
+          }));
+          activateTrack(shuffleHistory.ids[nextHistoryIndex]);
           return;
         }
 
-        const playedShuffleKeys = new Set(
-          cyclePlayedIds.map((id) =>
-            getShuffleKey(tracksById.get(id)),
-          ),
-        );
-        let candidates = queueIds.filter(
-          (id) =>
-            id !== currentTrackId &&
-            !playedShuffleKeys.has(
-              getShuffleKey(tracksById.get(id)),
-            ),
-        );
-        let nextCyclePlayed = cyclePlayedIds;
-
-        const shouldStartNewCycle =
-          repeatMode === 'all' || !automatic;
-        if (candidates.length === 0 && shouldStartNewCycle) {
-          candidates = queueIds.filter(
-            (id) =>
-              id !== currentTrackId &&
-              getShuffleKey(tracksById.get(id)) !==
-                currentShuffleKey,
-          );
-          nextCyclePlayed = [currentTrackId];
-        }
+        const shouldStartNewCycle = repeatMode === "all" || !automatic;
+        const { candidates, nextCyclePlayedIds } = getShuffleCandidates({
+          currentTrackId,
+          cyclePlayedIds,
+          queueIds,
+          restartCycle: shouldStartNewCycle,
+          tracks,
+        });
 
         if (candidates.length === 0) {
-          const uniqueTrackCount = new Set(
-            queueIds.map((id) =>
-              getShuffleKey(tracksById.get(id)),
-            ),
-          ).size;
-          if (uniqueTrackCount === 1 && shouldStartNewCycle) {
+          if (hasSingleUniqueTrack(queueIds, tracks) && shouldStartNewCycle) {
             void seekAudio(0);
             playAudio();
           }
           return;
         }
 
-        const nextId = candidates[Math.floor(Math.random() * candidates.length)];
-        setHistory((current) =>
-          [...current, nextId].slice(-SHUFFLE_HISTORY_LIMIT),
-        );
-        setHistoryIndex(
-          Math.min(history.length, SHUFFLE_HISTORY_LIMIT - 1),
-        );
-        setCyclePlayedIds([...nextCyclePlayed, nextId]);
+        const nextId =
+          candidates[Math.floor(Math.random() * candidates.length)];
+        setShuffleHistory((current) => {
+          const ids = [...current.ids, nextId].slice(-SHUFFLE_HISTORY_LIMIT);
+          return { ids, index: ids.length - 1 };
+        });
+        setCyclePlayedIds([...nextCyclePlayedIds, nextId]);
         activateTrack(nextId);
         return;
       }
@@ -480,7 +413,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       }
 
       const firstTrackId = queueIds[0];
-      if (automatic && repeatMode === 'none') {
+      if (automatic && repeatMode === "none") {
         activateTrack(firstTrackId, false);
         return;
       }
@@ -491,13 +424,12 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       activateTrack,
       currentTrackId,
       cyclePlayedIds,
-      history,
-      historyIndex,
       playAudio,
       queueIds,
       randomEnabled,
       repeatMode,
       seekAudio,
+      shuffleHistory,
       tracks,
     ],
   );
@@ -507,10 +439,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
   }, [goNext]);
 
   const previousTrack = useCallback(() => {
-    if (
-      status.currentTime > 3 &&
-      !previousRestartPendingRef.current
-    ) {
+    if (status.currentTime > 3 && !previousRestartPendingRef.current) {
       previousRestartPendingRef.current = true;
       void seekAudio(0);
       return;
@@ -519,10 +448,13 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
     previousRestartPendingRef.current = false;
 
     if (randomEnabled) {
-      if (historyIndex > 0) {
-        const previousHistoryIndex = historyIndex - 1;
-        setHistoryIndex(previousHistoryIndex);
-        activateTrack(history[previousHistoryIndex]);
+      if (shuffleHistory.index > 0) {
+        const previousHistoryIndex = shuffleHistory.index - 1;
+        setShuffleHistory((current) => ({
+          ...current,
+          index: previousHistoryIndex,
+        }));
+        activateTrack(shuffleHistory.ids[previousHistoryIndex]);
         return;
       }
 
@@ -530,35 +462,13 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
         return;
       }
 
-      const tracksById = new Map(
-        tracks.map((track) => [track.id, track]),
-      );
-      const currentShuffleKey = getShuffleKey(
-        tracksById.get(currentTrackId),
-      );
-      const playedShuffleKeys = new Set(
-        cyclePlayedIds.map((id) =>
-          getShuffleKey(tracksById.get(id)),
-        ),
-      );
-      let candidates = queueIds.filter(
-        (id) =>
-          id !== currentTrackId &&
-          !playedShuffleKeys.has(
-            getShuffleKey(tracksById.get(id)),
-          ),
-      );
-      let nextCyclePlayed = cyclePlayedIds;
-
-      if (candidates.length === 0) {
-        candidates = queueIds.filter(
-          (id) =>
-            id !== currentTrackId &&
-            getShuffleKey(tracksById.get(id)) !==
-              currentShuffleKey,
-        );
-        nextCyclePlayed = [currentTrackId];
-      }
+      const { candidates, nextCyclePlayedIds } = getShuffleCandidates({
+        currentTrackId,
+        cyclePlayedIds,
+        queueIds,
+        restartCycle: true,
+        tracks,
+      });
 
       if (candidates.length === 0) {
         void seekAudio(0);
@@ -568,11 +478,11 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
 
       const previousId =
         candidates[Math.floor(Math.random() * candidates.length)];
-      setHistory((current) =>
-        [previousId, ...current].slice(0, SHUFFLE_HISTORY_LIMIT),
-      );
-      setHistoryIndex(0);
-      setCyclePlayedIds([...nextCyclePlayed, previousId]);
+      setShuffleHistory((current) => ({
+        ids: [previousId, ...current.ids].slice(0, SHUFFLE_HISTORY_LIMIT),
+        index: 0,
+      }));
+      setCyclePlayedIds([...nextCyclePlayedIds, previousId]);
       activateTrack(previousId);
       return;
     }
@@ -591,12 +501,11 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
     activateTrack,
     currentTrackId,
     cyclePlayedIds,
-    history,
-    historyIndex,
     playAudio,
     queueIds,
     randomEnabled,
     seekAudio,
+    shuffleHistory,
     status.currentTime,
     tracks,
   ]);
@@ -641,10 +550,9 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
     setRandomEnabled((enabled) => {
       const nextEnabled = !enabled;
       if (nextEnabled) {
-        setRepeatMode('all');
+        setRepeatMode("all");
         if (currentTrackId) {
-          setHistory([currentTrackId]);
-          setHistoryIndex(0);
+          setShuffleHistory({ ids: [currentTrackId], index: 0 });
           setCyclePlayedIds([currentTrackId]);
         }
       }
@@ -664,10 +572,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
   }, [currentTrackId, status.duration, updateTrackDuration]);
 
   useEffect(() => {
-    if (
-      endedSequence > handledEndedSequenceRef.current &&
-      currentTrackId
-    ) {
+    if (endedSequence > handledEndedSequenceRef.current && currentTrackId) {
       handledEndedSequenceRef.current = endedSequence;
       goNext(true);
     }
@@ -799,7 +704,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
         onPositionChange={handleAudioPositionChange}
         ref={audioEngineRef}
         shouldPlayOnLoad={shouldPlayOnLoad}
-        source={currentTrack?.uri ?? ''}
+        source={currentTrack?.uri ?? ""}
         sourceRevision={sourceRevision}
       />
       {children}
@@ -810,7 +715,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
 export function usePlayback() {
   const playback = use(PlaybackContext);
   if (!playback) {
-    throw new Error('usePlayback must be used inside PlaybackProvider');
+    throw new Error("usePlayback must be used inside PlaybackProvider");
   }
   return playback;
 }

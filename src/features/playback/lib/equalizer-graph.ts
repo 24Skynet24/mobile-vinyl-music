@@ -3,12 +3,12 @@ import {
   type AudioNode,
   type BiquadFilterNode,
   type GainNode,
-} from 'react-native-audio-api';
+} from "react-native-audio-api";
 
 import {
   EQUALIZER_FREQUENCIES,
   type EqualizerBand,
-} from '@/entities/equalizer';
+} from "@/entities/equalizer";
 
 const FILTER_Q = 1.4;
 const PARAMETER_RAMP_SECONDS = 0.05;
@@ -24,7 +24,7 @@ export type EqualizerGraph = {
 export function createEqualizerGraph(context: AudioContext): EqualizerGraph {
   const filters = EQUALIZER_FREQUENCIES.map(({ hz }) => {
     const filter = context.createBiquadFilter();
-    filter.type = 'peaking';
+    filter.type = "peaking";
     filter.frequency.value = hz;
     filter.Q.value = FILTER_Q;
     filter.gain.value = 0;
@@ -56,17 +56,13 @@ export function updateEqualizerGraph(
   graph.filters.forEach((filter, index) => {
     const gain = bands[index]?.gain ?? 0;
     if (
-      Math.abs(gain - (graph.lastGains[index] ?? 0)) <
-      PARAMETER_CHANGE_EPSILON
+      Math.abs(gain - (graph.lastGains[index] ?? 0)) < PARAMETER_CHANGE_EPSILON
     ) {
       return;
     }
 
     filter.gain.cancelAndHoldAtTime(now);
-    filter.gain.linearRampToValueAtTime(
-      gain,
-      now + PARAMETER_RAMP_SECONDS,
-    );
+    filter.gain.linearRampToValueAtTime(gain, now + PARAMETER_RAMP_SECONDS);
     graph.lastGains[index] = gain;
   });
 }

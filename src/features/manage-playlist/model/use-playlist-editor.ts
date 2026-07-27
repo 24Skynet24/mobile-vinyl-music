@@ -27,10 +27,20 @@ export function usePlaylistEditor() {
   };
 
   const selectCover = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: "image/*",
-      copyToCacheDirectory: true,
-    });
+    let result: DocumentPicker.DocumentPickerResult;
+    try {
+      result = await DocumentPicker.getDocumentAsync({
+        type: "image/*",
+        copyToCacheDirectory: true,
+      });
+    } catch {
+      Alert.alert(
+        "File picker error",
+        "The system file picker could not be opened.",
+      );
+      return;
+    }
+
     if (!result.canceled) {
       const coverAsset = result.assets[0];
       updateEditor({ coverAsset, coverUri: coverAsset.uri });

@@ -1,10 +1,8 @@
 import { FlatList, View } from "react-native";
 
+import { formatFileSize, type PendingTrack } from "@/features/import-music";
 import { TextBebas } from "@/shared/ui/text";
 import { TrackListItem } from "@/shared/ui/track-list-item";
-
-import { formatFileSize } from "../lib/track-metadata";
-import type { PendingTrack } from "../model/types";
 
 type PendingTrackListProps = {
   tracks: PendingTrack[];

@@ -1,5 +1,5 @@
 import * as DocumentPicker from "expo-document-picker";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 
 import { persistAudioAsset, useLibrary } from "@/entities/library";
@@ -8,7 +8,7 @@ import { getAudioDuration } from "@/entities/track";
 import { metadataFromAsset } from "../lib/track-metadata";
 import type { MetadataEditor, PendingTrack } from "./types";
 
-export function useAddMusic(onImportComplete: () => void) {
+export function useImportMusic(onImportComplete: () => void) {
   const { addTracks, tracks } = useLibrary();
   const [pendingTracks, setPendingTracks] = useState<PendingTrack[]>([]);
   const [metadataEditor, setMetadataEditor] = useState<MetadataEditor | null>(
@@ -16,15 +16,36 @@ export function useAddMusic(onImportComplete: () => void) {
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isReadingDurations, setIsReadingDurations] = useState(false);
+  const selectionRevisionRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      selectionRevisionRef.current += 1;
+    };
+  }, []);
 
   const selectMusic = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      copyToCacheDirectory: true,
-      multiple: true,
-      type: "audio/*",
-    });
+    if (isReadingDurations || isSaving) {
+      return;
+    }
 
-    if (result.canceled) {
+    const selectionRevision = ++selectionRevisionRef.current;
+    let result: DocumentPicker.DocumentPickerResult;
+    try {
+      result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: true,
+        type: "audio/*",
+      });
+    } catch {
+      Alert.alert(
+        "File picker error",
+        "The system file picker could not be opened.",
+      );
+      return;
+    }
+
+    if (result.canceled || selectionRevision !== selectionRevisionRef.current) {
       return;
     }
 
@@ -44,9 +65,7 @@ export function useAddMusic(onImportComplete: () => void) {
       return [
         ...current,
         ...selectedTracks.filter(({ asset }) => {
-          const fileName = asset.name
-            .trim()
-            .toLocaleLowerCase();
+          const fileName = asset.name.trim().toLocaleLowerCase();
           if (existing.has(fileName)) {
             return false;
           }
@@ -60,8 +79,20 @@ export function useAddMusic(onImportComplete: () => void) {
     setIsReadingDurations(true);
     try {
       for (const selectedTrack of selectedTracks) {
-        const duration = await getAudioDuration(selectedTrack.asset.uri);
-        if (duration > 0) {
+        if (selectionRevision !== selectionRevisionRef.current) {
+          return;
+        }
+
+        let duration = 0;
+        try {
+          duration = await getAudioDuration(selectedTrack.asset.uri);
+        } catch {
+          // A track can still be imported when its duration is unavailable.
+        }
+        if (
+          duration > 0 &&
+          selectionRevision === selectionRevisionRef.current
+        ) {
           setPendingTracks((current) =>
             current.map((track) =>
               track.asset.uri === selectedTrack.asset.uri
@@ -72,7 +103,9 @@ export function useAddMusic(onImportComplete: () => void) {
         }
       }
     } finally {
-      setIsReadingDurations(false);
+      if (selectionRevision === selectionRevisionRef.current) {
+        setIsReadingDurations(false);
+      }
     }
   };
 
@@ -83,9 +116,7 @@ export function useAddMusic(onImportComplete: () => void) {
 
     setIsSaving(true);
     const existingFileNames = new Set(
-      tracks.map((track) =>
-        track.fileName.trim().toLocaleLowerCase(),
-      ),
+      tracks.map((track) => track.fileName.trim().toLocaleLowerCase()),
     );
     const tracksToImport = pendingTracks.filter(({ asset }) => {
       const fileName = asset.name.trim().toLocaleLowerCase();

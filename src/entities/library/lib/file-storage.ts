@@ -1,33 +1,33 @@
-import type { DocumentPickerAsset } from 'expo-document-picker';
-import { Directory, File, Paths } from 'expo-file-system';
+import type { DocumentPickerAsset } from "expo-document-picker";
+import { Directory, File, Paths } from "expo-file-system";
 
-import type { Track } from '@/entities/track';
+import type { Track } from "@/entities/track/@x/library";
 
-const MUSIC_DIRECTORY = 'music-library';
-const COVER_DIRECTORY = 'playlist-covers';
+const MUSIC_DIRECTORY = "music-library";
+const COVER_DIRECTORY = "playlist-covers";
 
 function createId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 function safeFileName(name: string) {
-  return name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  return name.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 function titleFromFileName(fileName: string) {
-  return fileName.replace(/\.[^/.]+$/, '').trim() || 'Untitled';
+  return fileName.replace(/\.[^/.]+$/, "").trim() || "Untitled";
 }
 
 function metadataFromFileName(fileName: string) {
   const rawTitle = titleFromFileName(fileName);
-  const [title, ...artistParts] = rawTitle.split(' - ');
+  const [title, ...artistParts] = rawTitle.split(" - ");
 
   if (artistParts.length === 0) {
-    return { artist: '', title: rawTitle };
+    return { artist: "", title: rawTitle };
   }
 
   return {
-    artist: artistParts.join(' - ').trim(),
+    artist: artistParts.join(" - ").trim(),
     title: title.trim() || rawTitle,
   };
 }
@@ -59,7 +59,7 @@ export function persistAudioAsset(
   const fileMetadata = metadataFromFileName(asset.name);
   const metadata = metadataOverride ?? {
     ...fileMetadata,
-    album: '',
+    album: "",
     year: null,
   };
 

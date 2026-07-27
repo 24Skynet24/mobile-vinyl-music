@@ -1,4 +1,4 @@
-import type { EqualizerBand } from '@/entities/equalizer';
+import type { EqualizerBand } from "@/entities/equalizer";
 
 export type PlaybackAudioEngineHandle = {
   pause: () => void;

@@ -4,17 +4,17 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
-} from 'react';
+} from "react";
 
 import {
   EQUALIZER_FREQUENCIES,
   type EqualizerBand,
-} from '@/entities/equalizer';
+} from "@/entities/equalizer";
 
 import type {
   PlaybackAudioEngineHandle,
   PlaybackAudioEngineProps,
-} from '../model/audio-engine-types';
+} from "../model/audio-engine-types";
 
 const FILTER_Q = 1.4;
 const PARAMETER_RAMP_SECONDS = 0.05;
@@ -33,7 +33,7 @@ function createWebEqualizerGraph(
 ): WebEqualizerGraph {
   const filters = EQUALIZER_FREQUENCIES.map(({ hz }, index) => {
     const filter = context.createBiquadFilter();
-    filter.type = 'peaking';
+    filter.type = "peaking";
     filter.frequency.value = hz;
     filter.Q.value = FILTER_Q;
     filter.gain.value = bands[index]?.gain ?? 0;
@@ -65,17 +65,13 @@ function updateWebEqualizerGraph(
   graph.filters.forEach((filter, index) => {
     const gain = bands[index]?.gain ?? 0;
     if (
-      Math.abs(gain - (graph.lastGains[index] ?? 0)) <
-      PARAMETER_CHANGE_EPSILON
+      Math.abs(gain - (graph.lastGains[index] ?? 0)) < PARAMETER_CHANGE_EPSILON
     ) {
       return;
     }
 
     filter.gain.cancelAndHoldAtTime(now);
-    filter.gain.linearRampToValueAtTime(
-      gain,
-      now + PARAMETER_RAMP_SECONDS,
-    );
+    filter.gain.linearRampToValueAtTime(gain, now + PARAMETER_RAMP_SECONDS);
     graph.lastGains[index] = gain;
   });
 }
@@ -103,17 +99,13 @@ export const PlaybackAudioEngine = forwardRef<
   const audioRef = useRef<HTMLAudioElement>(null);
   const contextRef = useRef<AudioContext>(null);
   const graphRef = useRef<WebEqualizerGraph>(null);
-  const sourceNodeRef = useRef<
-    ReturnType<AudioContext['createMediaElementSource']>
-  >(null);
+  const sourceNodeRef =
+    useRef<ReturnType<AudioContext["createMediaElementSource"]>>(null);
   const routedElementRef = useRef<HTMLAudioElement>(null);
 
   if (!contextRef.current) {
     contextRef.current = new AudioContext();
-    graphRef.current = createWebEqualizerGraph(
-      contextRef.current,
-      bands,
-    );
+    graphRef.current = createWebEqualizerGraph(contextRef.current, bands);
   }
 
   const play = useCallback(() => {
@@ -160,9 +152,7 @@ export const PlaybackAudioEngine = forwardRef<
     return () => {
       sourceNodeRef.current?.disconnect();
       if (graphRef.current) {
-        graphRef.current.filters.forEach((filter) =>
-          filter.disconnect(),
-        );
+        graphRef.current.filters.forEach((filter) => filter.disconnect());
         graphRef.current.output.disconnect();
       }
       void contextRef.current?.close();
@@ -185,9 +175,7 @@ export const PlaybackAudioEngine = forwardRef<
         sourceNodeRef.current = sourceNode;
         routedElementRef.current = audio;
       }
-      onDurationChange(
-        Number.isFinite(audio.duration) ? audio.duration : 0,
-      );
+      onDurationChange(Number.isFinite(audio.duration) ? audio.duration : 0);
       onLoaded();
 
       if (shouldPlayOnLoad) {
@@ -196,20 +184,14 @@ export const PlaybackAudioEngine = forwardRef<
     } catch (error) {
       onError(error instanceof Error ? error : new Error(String(error)));
     }
-  }, [
-    onDurationChange,
-    onError,
-    onLoaded,
-    play,
-    shouldPlayOnLoad,
-  ]);
+  }, [onDurationChange, onError, onLoaded, play, shouldPlayOnLoad]);
 
   return (
     <audio
       key={`${source}-${sourceRevision}`}
       onCanPlay={handleCanPlay}
       onEnded={onEnded}
-      onError={() => onError(new Error('Failed to load audio source'))}
+      onError={() => onError(new Error("Failed to load audio source"))}
       onLoadStart={onLoading}
       onPause={onPause}
       onPlay={onPlay}
@@ -219,7 +201,7 @@ export const PlaybackAudioEngine = forwardRef<
       preload="auto"
       ref={audioRef}
       src={source || undefined}
-      style={{ display: 'none' }}
+      style={{ display: "none" }}
     />
   );
 });

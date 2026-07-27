@@ -8,13 +8,13 @@ import {
 } from "react-native";
 
 import { useLibrary } from "@/entities/library";
+import { usePlaylistEditor } from "@/features/manage-playlist";
 import { SearchToolbar } from "@/shared/ui/search-toolbar";
 import { SlidingPanel } from "@/shared/ui/sliding-panel";
 import { TextBebas } from "@/shared/ui/text";
 
 import { filterPlaylists } from "../lib/filter-playlists";
 import type { PlaylistPanelProps } from "../model/types";
-import { usePlaylistEditor } from "../model/use-playlist-editor";
 import { PlaylistEditorModal } from "./playlist-editor-modal";
 import { PlaylistItem } from "./playlist-item";
 

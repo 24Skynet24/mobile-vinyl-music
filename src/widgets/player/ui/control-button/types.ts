@@ -1,13 +1,15 @@
-import type { PressableProps } from 'react-native';
+import type { PressableProps } from "react-native";
 
-import type { RepeatMode } from '@/entities/playback';
+import type { RepeatMode } from "@/features/playback";
 
-export type ControlButtonIcon = 'play' | 'stop' | 'next' | 'prev';
+export type ControlButtonIcon = "play" | "stop" | "next" | "prev";
 
 export type { RepeatMode };
 
-export interface ControlButtonFrameProps
-  extends Omit<PressableProps, 'children'> {
+export interface ControlButtonFrameProps extends Omit<
+  PressableProps,
+  "children"
+> {
   hasOffset?: boolean;
 }
 

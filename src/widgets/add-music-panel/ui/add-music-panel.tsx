@@ -1,9 +1,9 @@
 import { useWindowDimensions, View } from "react-native";
 
+import { useImportMusic } from "@/features/import-music";
 import { SlidingPanel } from "@/shared/ui/sliding-panel";
 
 import type { AddMusicPanelProps } from "../model/types";
-import { useAddMusic } from "../model/use-add-music";
 import { AddMusicHeader } from "./add-music-header";
 import { MetadataEditorModal } from "./metadata-editor-modal";
 import { PendingTrackList } from "./pending-track-list";
@@ -28,7 +28,7 @@ export function AddMusicPanel({
     saveMetadata,
     selectMusic,
     updateMetadataEditor,
-  } = useAddMusic(onImportComplete);
+  } = useImportMusic(onImportComplete);
   const contentHeight = windowHeight * ADD_MUSIC_PANEL_HEIGHT_RATIO;
 
   return (
@@ -41,7 +41,10 @@ export function AddMusicPanel({
             onConfirm={confirmImport}
             pendingTrackCount={pendingTracks.length}
           />
-          <SelectMusicButton onPress={() => void selectMusic()} />
+          <SelectMusicButton
+            disabled={isReadingDurations || isSaving}
+            onPress={() => void selectMusic()}
+          />
           <PendingTrackList
             onEdit={openMetadataEditor}
             onRemove={removePendingTrack}

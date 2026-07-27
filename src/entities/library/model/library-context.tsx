@@ -1,27 +1,28 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { PropsWithChildren } from 'react';
+import type { PropsWithChildren } from "react";
 import {
   createContext,
   use,
   useCallback,
   useEffect,
   useMemo,
+  useReducer,
+  useRef,
   useState,
-} from 'react';
+} from "react";
 
-import type { Playlist, PlaylistInput } from '@/entities/playlist';
-import type { Track } from '@/entities/track';
+import type { PlaylistInput } from "@/entities/playlist/@x/library";
+import type { Track } from "@/entities/track/@x/library";
 
-import { deleteStoredFile } from '../lib/file-storage';
+import { deleteStoredFile } from "../lib/file-storage";
+import {
+  createInitialLibraryState,
+  DEFAULT_PLAYLIST_ID,
+  libraryReducer,
+  type LibraryAction,
+} from "./library-state";
+import { loadLibraryState, saveLibraryState } from "./library-storage";
 
-const STORAGE_KEY = 'vinyl-music/library-v1';
-
-type LibraryState = {
-  tracks: Track[];
-  playlists: Playlist[];
-};
-
-type LibraryContextValue = LibraryState & {
+type LibraryContextValue = ReturnType<typeof createInitialLibraryState> & {
   isHydrated: boolean;
   addTracks: (tracks: Track[]) => void;
   removeTrack: (trackId: string) => void;
@@ -33,89 +34,53 @@ type LibraryContextValue = LibraryState & {
   removeTrackFromPlaylist: (playlistId: string, trackId: string) => void;
 };
 
-const DEFAULT_PLAYLIST: Playlist = {
-  id: 'favorites',
-  title: 'Favorites',
-  description: 'Your favorite records',
-  trackIds: [],
-  createdAt: Date.now(),
-};
-
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
 function createId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function normalizeStoredTrack(track: Track): Track {
-  const rawFileTitle = track.fileName.replace(/\.[^/.]+$/, '').trim();
-  const [expectedTitle, ...artistParts] = rawFileTitle.split(' - ');
-  const expectedArtist = artistParts.join(' - ').trim();
-  const hasLegacyReversedMetadata =
-    expectedArtist &&
-    track.artist === expectedTitle.trim() &&
-    track.title === expectedArtist;
-
-  return {
-    ...track,
-    title: hasLegacyReversedMetadata ? expectedTitle.trim() : track.title,
-    artist:
-      track.artist === 'Unknown artist'
-        ? ''
-        : hasLegacyReversedMetadata
-          ? expectedArtist
-          : track.artist,
-    album: track.album === 'Unknown album' ? '' : track.album,
-  };
-}
-
-function normalizeStoredPlaylists(playlists: Playlist[]) {
-  const storedFavorites = playlists.find(
-    (playlist) => playlist.id === DEFAULT_PLAYLIST.id,
-  );
-  const favorites = storedFavorites
-    ? {
-        ...storedFavorites,
-        coverUri: undefined,
-        title: DEFAULT_PLAYLIST.title,
-      }
-    : DEFAULT_PLAYLIST;
-
-  return [
-    favorites,
-    ...playlists.filter((playlist) => playlist.id !== DEFAULT_PLAYLIST.id),
-  ];
+function safelyDeleteStoredFile(uri?: string) {
+  try {
+    deleteStoredFile(uri);
+  } catch {
+    // A stale or externally moved file must not block the state update.
+  }
 }
 
 export function LibraryProvider({ children }: PropsWithChildren) {
-  const [library, setLibrary] = useState<LibraryState>({
-    tracks: [],
-    playlists: [DEFAULT_PLAYLIST],
-  });
+  const [library, dispatch] = useReducer(
+    libraryReducer,
+    undefined,
+    createInitialLibraryState,
+  );
+  const libraryRef = useRef(library);
+  const isHydratedRef = useRef(false);
+  const pendingActionsRef = useRef<LibraryAction[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
+  libraryRef.current = library;
+
+  const dispatchAction = useCallback((action: LibraryAction) => {
+    if (!isHydratedRef.current) {
+      pendingActionsRef.current.push(action);
+    }
+    dispatch(action);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
 
-    void AsyncStorage.getItem(STORAGE_KEY)
+    void loadLibraryState()
       .then((savedLibrary) => {
-        if (!savedLibrary || !isMounted) {
-          return;
+        if (savedLibrary && isMounted) {
+          dispatch({ state: savedLibrary, type: "hydrate" });
+          pendingActionsRef.current.forEach(dispatch);
         }
-
-        const parsed = JSON.parse(savedLibrary) as Partial<LibraryState>;
-        setLibrary({
-          tracks: Array.isArray(parsed.tracks)
-            ? parsed.tracks.map(normalizeStoredTrack)
-            : [],
-          playlists: Array.isArray(parsed.playlists)
-            ? normalizeStoredPlaylists(parsed.playlists)
-            : [DEFAULT_PLAYLIST],
-        });
       })
-      .catch(() => undefined)
       .finally(() => {
         if (isMounted) {
+          pendingActionsRef.current = [];
+          isHydratedRef.current = true;
           setIsHydrated(true);
         }
       });
@@ -126,160 +91,112 @@ export function LibraryProvider({ children }: PropsWithChildren) {
   }, []);
 
   useEffect(() => {
-    if (!isHydrated) {
-      return;
+    if (isHydrated) {
+      void saveLibraryState(library);
     }
-
-    void AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(library));
   }, [isHydrated, library]);
 
-  const addTracks = useCallback((tracks: Track[]) => {
-    setLibrary((current) => ({
-      ...current,
-      tracks: [...current.tracks, ...tracks],
-    }));
-  }, []);
+  const addTracks = useCallback(
+    (tracks: Track[]) => {
+      dispatchAction({ tracks, type: "tracks/add" });
+    },
+    [dispatchAction],
+  );
 
-  const removeTrack = useCallback((trackId: string) => {
-    setLibrary((current) => {
-      const track = current.tracks.find((item) => item.id === trackId);
-      try {
-        deleteStoredFile(track?.uri);
-      } catch {
-        // The library entry still needs to be removed if the file was moved externally.
-      }
-
-      return {
-        tracks: current.tracks.filter((item) => item.id !== trackId),
-        playlists: current.playlists.map((playlist) => ({
-          ...playlist,
-          trackIds: playlist.trackIds.filter((id) => id !== trackId),
-        })),
-      };
-    });
-  }, []);
+  const removeTrack = useCallback(
+    (trackId: string) => {
+      const track = libraryRef.current.tracks.find(
+        (item) => item.id === trackId,
+      );
+      dispatchAction({ trackId, type: "tracks/remove" });
+      safelyDeleteStoredFile(track?.uri);
+    },
+    [dispatchAction],
+  );
 
   const updateTrackDuration = useCallback(
     (trackId: string, duration: number) => {
-      if (!Number.isFinite(duration) || duration <= 0) {
-        return;
-      }
-
-      setLibrary((current) => ({
-        ...current,
-        tracks: current.tracks.map((track) =>
-          track.id === trackId && track.duration <= 0
-            ? { ...track, duration }
-            : track,
-        ),
-      }));
+      dispatchAction({ duration, trackId, type: "tracks/update-duration" });
     },
-    [],
+    [dispatchAction],
   );
 
-  const createPlaylist = useCallback((input: PlaylistInput) => {
-    const id = createId();
-    setLibrary((current) => ({
-      ...current,
-      playlists: [
-        ...current.playlists,
-        { ...input, id, trackIds: [], createdAt: Date.now() },
-      ],
-    }));
-    return id;
-  }, []);
+  const createPlaylist = useCallback(
+    (input: PlaylistInput) => {
+      const id = createId();
+      dispatchAction({
+        playlist: {
+          ...input,
+          createdAt: Date.now(),
+          id,
+          trackIds: [],
+        },
+        type: "playlists/create",
+      });
+      return id;
+    },
+    [dispatchAction],
+  );
 
   const updatePlaylist = useCallback(
     (playlistId: string, input: PlaylistInput) => {
-      if (playlistId === DEFAULT_PLAYLIST.id) {
+      if (playlistId === DEFAULT_PLAYLIST_ID) {
         return;
       }
 
-      setLibrary((current) => ({
-        ...current,
-        playlists: current.playlists.map((playlist) => {
-          if (playlist.id !== playlistId) {
-            return playlist;
-          }
+      const previousCoverUri = libraryRef.current.playlists.find(
+        (playlist) => playlist.id === playlistId,
+      )?.coverUri;
+      dispatchAction({ input, playlistId, type: "playlists/update" });
 
-          if (playlist.coverUri !== input.coverUri) {
-            try {
-              deleteStoredFile(playlist.coverUri);
-            } catch {
-              // Keep the edit even when an obsolete cached cover cannot be removed.
-            }
-          }
-
-          return { ...playlist, ...input };
-        }),
-      }));
+      if (previousCoverUri !== input.coverUri) {
+        safelyDeleteStoredFile(previousCoverUri);
+      }
     },
-    [],
+    [dispatchAction],
   );
 
-  const removePlaylist = useCallback((playlistId: string) => {
-    if (playlistId === DEFAULT_PLAYLIST.id) {
-      return;
-    }
-
-    setLibrary((current) => {
-      const playlist = current.playlists.find((item) => item.id === playlistId);
-      try {
-        deleteStoredFile(playlist?.coverUri);
-      } catch {
-        // Removing the playlist should not depend on its cover file.
+  const removePlaylist = useCallback(
+    (playlistId: string) => {
+      if (playlistId === DEFAULT_PLAYLIST_ID) {
+        return;
       }
 
-      return {
-        ...current,
-        playlists: current.playlists.filter((item) => item.id !== playlistId),
-      };
-    });
-  }, []);
+      const coverUri = libraryRef.current.playlists.find(
+        (playlist) => playlist.id === playlistId,
+      )?.coverUri;
+      dispatchAction({ playlistId, type: "playlists/remove" });
+      safelyDeleteStoredFile(coverUri);
+    },
+    [dispatchAction],
+  );
 
   const addTrackToPlaylist = useCallback(
     (playlistId: string, trackId: string) => {
-      setLibrary((current) => ({
-        ...current,
-        playlists: current.playlists.map((playlist) =>
-          playlist.id === playlistId && !playlist.trackIds.includes(trackId)
-            ? { ...playlist, trackIds: [...playlist.trackIds, trackId] }
-            : playlist,
-        ),
-      }));
+      dispatchAction({ playlistId, trackId, type: "playlists/add-track" });
     },
-    [],
+    [dispatchAction],
   );
 
   const removeTrackFromPlaylist = useCallback(
     (playlistId: string, trackId: string) => {
-      setLibrary((current) => ({
-        ...current,
-        playlists: current.playlists.map((playlist) =>
-          playlist.id === playlistId
-            ? {
-                ...playlist,
-                trackIds: playlist.trackIds.filter((id) => id !== trackId),
-              }
-            : playlist,
-        ),
-      }));
+      dispatchAction({ playlistId, trackId, type: "playlists/remove-track" });
     },
-    [],
+    [dispatchAction],
   );
 
   const value = useMemo<LibraryContextValue>(
     () => ({
       ...library,
-      isHydrated,
-      addTracks,
-      removeTrack,
-      updateTrackDuration,
-      createPlaylist,
-      updatePlaylist,
-      removePlaylist,
       addTrackToPlaylist,
+      addTracks,
+      createPlaylist,
+      isHydrated,
+      removePlaylist,
+      removeTrack,
       removeTrackFromPlaylist,
+      updatePlaylist,
+      updateTrackDuration,
     }),
     [
       addTrackToPlaylist,
@@ -301,7 +218,7 @@ export function LibraryProvider({ children }: PropsWithChildren) {
 export function useLibrary() {
   const library = use(LibraryContext);
   if (!library) {
-    throw new Error('useLibrary must be used inside LibraryProvider');
+    throw new Error("useLibrary must be used inside LibraryProvider");
   }
   return library;
 }

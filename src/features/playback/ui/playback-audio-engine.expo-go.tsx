@@ -1,19 +1,16 @@
-import {
-  useAudioPlayer,
-  useAudioPlayerStatus,
-} from 'expo-audio';
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import {
   forwardRef,
   useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
-} from 'react';
+} from "react";
 
 import type {
   PlaybackAudioEngineHandle,
   PlaybackAudioEngineProps,
-} from '../model/audio-engine-types';
+} from "../model/audio-engine-types";
 
 export const ExpoGoPlaybackAudioEngine = forwardRef<
   PlaybackAudioEngineHandle,
@@ -116,9 +113,7 @@ export const ExpoGoPlaybackAudioEngine = forwardRef<
       return;
     }
 
-    onDurationChange(
-      Number.isFinite(status.duration) ? status.duration : 0,
-    );
+    onDurationChange(Number.isFinite(status.duration) ? status.duration : 0);
   }, [onDurationChange, source, status.duration]);
 
   useEffect(() => {
@@ -185,13 +180,7 @@ export const ExpoGoPlaybackAudioEngine = forwardRef<
 
     endedRevisionRef.current = sourceRevision;
     onEnded();
-  }, [
-    onEnded,
-    player,
-    source,
-    sourceRevision,
-    status.didJustFinish,
-  ]);
+  }, [onEnded, player, source, sourceRevision, status.didJustFinish]);
 
   return null;
 });

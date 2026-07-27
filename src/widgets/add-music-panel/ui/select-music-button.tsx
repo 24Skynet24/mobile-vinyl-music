@@ -6,14 +6,22 @@ import { TextBebas, TextFutura } from "@/shared/ui/text";
 const selectMusicIcon = require("@/shared/assets/icons/select-music.svg");
 
 type SelectMusicButtonProps = {
+  disabled?: boolean;
   onPress: () => void;
 };
 
-export function SelectMusicButton({ onPress }: SelectMusicButtonProps) {
+export function SelectMusicButton({
+  disabled = false,
+  onPress,
+}: SelectMusicButtonProps) {
   return (
     <Pressable
       accessibilityLabel="Select one or more audio files"
-      className="mb-4 flex-row items-center justify-center gap-4 border-2 border-dashed border-orange-main bg-black-main/50 px-5 py-5 active:opacity-70"
+      accessibilityState={{ disabled }}
+      className={`mb-4 flex-row items-center justify-center gap-4 border-2 border-dashed border-orange-main bg-black-main/50 px-5 py-5 active:opacity-70 ${
+        disabled ? "opacity-40" : ""
+      }`}
+      disabled={disabled}
       onPress={onPress}
     >
       <Image

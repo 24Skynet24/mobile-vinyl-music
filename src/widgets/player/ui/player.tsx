@@ -1,14 +1,14 @@
-import { View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { View } from "react-native";
+import Animated from "react-native-reanimated";
 
-import { usePlayback } from '@/entities/playback';
-import { TextBebas } from '@/shared/ui/text';
+import { usePlayback } from "@/features/playback";
+import { TextBebas } from "@/shared/ui/text";
 
-import { usePlayerAnimation } from '../lib/use-player-animation';
-import { Controls } from './controls';
-import { Timeline } from './timeline';
-import { Tonearm } from './tonearm';
-import { VinylRecord } from './vinyl-record';
+import { usePlayerAnimation } from "../lib/use-player-animation";
+import { Controls } from "./controls";
+import { Timeline } from "./timeline";
+import { Tonearm } from "./tonearm";
+import { VinylRecord } from "./vinyl-record";
 
 export function Player() {
   const {
@@ -53,12 +53,15 @@ export function Player() {
 
       <View className="w-full gap-2">
         <TextBebas className="w-full text-[42px] text-orange-main">
-          {currentTrack?.title || (isHydrated ? 'Music name' : '')}
+          {currentTrack?.title || (isHydrated ? "Music name" : "")}
         </TextBebas>
         {metadata.length > 0 ? (
           <View className="max-w-full flex-row flex-wrap items-center gap-2">
             {metadata.map((value, index) => (
-              <View className="flex-row items-center gap-2" key={`${value}-${index}`}>
+              <View
+                className="flex-row items-center gap-2"
+                key={`${value}-${index}`}
+              >
                 {index > 0 ? (
                   <View className="h-2 w-2 rounded-full bg-gray-main" />
                 ) : null}

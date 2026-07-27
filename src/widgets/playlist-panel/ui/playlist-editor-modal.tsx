@@ -44,8 +44,12 @@ export function PlaylistEditorModal({
           onPress={onClose}
         >
           <Pressable
-            className="w-full max-w-[520px] items-center gap-4 border-2 border-orange-main bg-black-main p-5"
+            className="w-full max-w-[520px] items-center gap-4 border-2 border-orange-main p-5 rounded-[16px]"
             onPress={(event) => event.stopPropagation()}
+            style={{
+              experimental_backgroundImage:
+                "linear-gradient(to right, #251f1f 0%, #251f1f 30%, #44403d 100%)",
+            }}
           >
             <TextBebas className="text-[28px] text-orange-main">
               {editor?.playlistId ? "Edit playlist" : "New playlist"}

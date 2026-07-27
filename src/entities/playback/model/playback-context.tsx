@@ -50,6 +50,7 @@ const NEXT_REPEAT_MODE: Record<RepeatMode, RepeatMode> = {
 };
 
 const POSITION_SAVE_INTERVAL_MS = 2_000;
+const SHUFFLE_HISTORY_LIMIT = 100;
 
 type PendingRestore = {
   position: number;
@@ -460,8 +461,12 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
         }
 
         const nextId = candidates[Math.floor(Math.random() * candidates.length)];
-        setHistory((current) => [...current, nextId]);
-        setHistoryIndex(history.length);
+        setHistory((current) =>
+          [...current, nextId].slice(-SHUFFLE_HISTORY_LIMIT),
+        );
+        setHistoryIndex(
+          Math.min(history.length, SHUFFLE_HISTORY_LIMIT - 1),
+        );
         setCyclePlayedIds([...nextCyclePlayed, nextId]);
         activateTrack(nextId);
         return;
@@ -518,9 +523,57 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
         const previousHistoryIndex = historyIndex - 1;
         setHistoryIndex(previousHistoryIndex);
         activateTrack(history[previousHistoryIndex]);
-      } else {
-        void seekAudio(0);
+        return;
       }
+
+      if (!currentTrackId || queueIds.length === 0) {
+        return;
+      }
+
+      const tracksById = new Map(
+        tracks.map((track) => [track.id, track]),
+      );
+      const currentShuffleKey = getShuffleKey(
+        tracksById.get(currentTrackId),
+      );
+      const playedShuffleKeys = new Set(
+        cyclePlayedIds.map((id) =>
+          getShuffleKey(tracksById.get(id)),
+        ),
+      );
+      let candidates = queueIds.filter(
+        (id) =>
+          id !== currentTrackId &&
+          !playedShuffleKeys.has(
+            getShuffleKey(tracksById.get(id)),
+          ),
+      );
+      let nextCyclePlayed = cyclePlayedIds;
+
+      if (candidates.length === 0) {
+        candidates = queueIds.filter(
+          (id) =>
+            id !== currentTrackId &&
+            getShuffleKey(tracksById.get(id)) !==
+              currentShuffleKey,
+        );
+        nextCyclePlayed = [currentTrackId];
+      }
+
+      if (candidates.length === 0) {
+        void seekAudio(0);
+        playAudio();
+        return;
+      }
+
+      const previousId =
+        candidates[Math.floor(Math.random() * candidates.length)];
+      setHistory((current) =>
+        [previousId, ...current].slice(0, SHUFFLE_HISTORY_LIMIT),
+      );
+      setHistoryIndex(0);
+      setCyclePlayedIds([...nextCyclePlayed, previousId]);
+      activateTrack(previousId);
       return;
     }
 
@@ -537,12 +590,15 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
   }, [
     activateTrack,
     currentTrackId,
+    cyclePlayedIds,
     history,
     historyIndex,
+    playAudio,
     queueIds,
     randomEnabled,
     seekAudio,
     status.currentTime,
+    tracks,
   ]);
 
   const togglePlayback = useCallback(() => {

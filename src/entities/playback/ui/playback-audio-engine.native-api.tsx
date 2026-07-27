@@ -22,6 +22,9 @@ import type {
   PlaybackAudioEngineProps,
 } from '../model/audio-engine-types';
 
+const POSITION_UPDATE_INTERVAL_MS = 100;
+const SOURCE_RELEASE_DELAY_MS = 50;
+
 export const PlaybackAudioEngine = forwardRef<
   PlaybackAudioEngineHandle,
   PlaybackAudioEngineProps
@@ -52,11 +55,48 @@ export const PlaybackAudioEngine = forwardRef<
   const loadRevisionRef = useRef(0);
   const playRequestRef = useRef(0);
   const playIntentRef = useRef(false);
+  const pendingSourceReleasesRef = useRef(
+    new Map<
+      AudioBufferSourceNode,
+      ReturnType<typeof setTimeout>
+    >(),
+  );
 
   if (!contextRef.current) {
     contextRef.current = new AudioContext();
     graphRef.current = createEqualizerGraph(contextRef.current);
   }
+
+  const releaseSource = useCallback(
+    (sourceNode: AudioBufferSourceNode) => {
+      const timeoutId =
+        pendingSourceReleasesRef.current.get(sourceNode);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        pendingSourceReleasesRef.current.delete(sourceNode);
+      }
+
+      sourceNode.onEnded = null;
+      sourceNode.onPositionChanged = null;
+      sourceNode.buffer = null;
+      sourceNode.disconnect();
+    },
+    [],
+  );
+
+  const scheduleSourceRelease = useCallback(
+    (sourceNode: AudioBufferSourceNode) => {
+      const timeoutId = setTimeout(() => {
+        releaseSource(sourceNode);
+      }, SOURCE_RELEASE_DELAY_MS);
+
+      pendingSourceReleasesRef.current.set(
+        sourceNode,
+        timeoutId,
+      );
+    },
+    [releaseSource],
+  );
 
   const stopSource = useCallback(() => {
     const sourceNode = sourceNodeRef.current;
@@ -69,13 +109,14 @@ export const PlaybackAudioEngine = forwardRef<
 
     try {
       sourceNode.stop();
+      scheduleSourceRelease(sourceNode);
     } catch {
       // A source that has already ended cannot be stopped again.
+      releaseSource(sourceNode);
     }
 
-    sourceNode.disconnect();
     sourceNodeRef.current = null;
-  }, []);
+  }, [releaseSource, scheduleSourceRelease]);
 
   const cancelPendingOperations = useCallback(() => {
     playIntentRef.current = false;
@@ -133,15 +174,14 @@ export const PlaybackAudioEngine = forwardRef<
             : positionRef.current;
         const sourceNode = context.createBufferSource();
         sourceNode.buffer = buffer;
-        sourceNode.onPositionChangedInterval = 0.1;
+        sourceNode.onPositionChangedInterval =
+          POSITION_UPDATE_INTERVAL_MS;
         sourceNode.onPositionChanged = ({ value }) => {
           positionRef.current = Math.min(buffer.duration, value);
           onPositionChange(positionRef.current);
         };
         sourceNode.onEnded = () => {
-          sourceNode.onEnded = null;
-          sourceNode.onPositionChanged = null;
-          sourceNode.disconnect();
+          releaseSource(sourceNode);
 
           if (sourceNodeRef.current !== sourceNode) {
             return;
@@ -168,7 +208,13 @@ export const PlaybackAudioEngine = forwardRef<
         }
         onError(error instanceof Error ? error : new Error(String(error)));
       });
-  }, [onEnded, onError, onPlay, onPositionChange]);
+  }, [
+    onEnded,
+    onError,
+    onPlay,
+    onPositionChange,
+    releaseSource,
+  ]);
 
   const pause = useCallback(() => {
     const wasPlaying = playIntentRef.current || Boolean(sourceNodeRef.current);
@@ -250,11 +296,17 @@ export const PlaybackAudioEngine = forwardRef<
         }
       },
     );
+    const pendingSourceReleases =
+      pendingSourceReleasesRef.current;
 
     return () => {
       interruptionSubscription?.remove();
       cancelPendingOperations();
       stopSource();
+
+      for (const sourceNode of pendingSourceReleases.keys()) {
+        releaseSource(sourceNode);
+      }
 
       if (graphRef.current) {
         disconnectEqualizerGraph(graphRef.current);
@@ -263,7 +315,13 @@ export const PlaybackAudioEngine = forwardRef<
       void contextRef.current?.close();
       void AudioManager.setAudioSessionActivity(false);
     };
-  }, [cancelPendingOperations, pause, play, stopSource]);
+  }, [
+    cancelPendingOperations,
+    pause,
+    play,
+    releaseSource,
+    stopSource,
+  ]);
 
   useEffect(() => {
     const context = contextRef.current;

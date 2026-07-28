@@ -136,6 +136,19 @@ artifact from the workflow summary. GitHub keeps the artifact for 14 days.
 The workflow performs a clean Expo Prebuild, runs ESLint and TypeScript checks,
 and builds the APK without requiring an Expo access token.
 
+To publish an APK in GitHub Releases, push a version tag that matches the
+application version:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Tags beginning with `v` trigger the same verified build and then create a
+GitHub Release with generated release notes and `app-release.apk` attached.
+Normal pushes to `main` continue to produce Actions artifacts without creating
+additional Releases.
+
 ## Project structure
 
 ```text

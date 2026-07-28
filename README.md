@@ -126,6 +126,16 @@ Run the TypeScript compiler:
 npx tsc --noEmit
 ```
 
+## Continuous integration
+
+GitHub Actions automatically builds a release APK after every push to the
+`main` branch. The workflow can also be started manually from the Actions tab.
+
+After a successful run, download the `vinyl-music-android-<commit-sha>`
+artifact from the workflow summary. GitHub keeps the artifact for 14 days.
+The workflow performs a clean Expo Prebuild, runs ESLint and TypeScript checks,
+and builds the APK without requiring an Expo access token.
+
 ## Project structure
 
 ```text

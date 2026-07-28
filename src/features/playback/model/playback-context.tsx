@@ -118,6 +118,18 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
 
   const currentTrack =
     tracks.find((track) => track.id === currentTrackId) ?? null;
+  const audioMetadata = useMemo(
+    () =>
+      currentTrack
+        ? {
+            album: currentTrack.album,
+            artist: currentTrack.artist,
+            artworkUri: currentTrack.coverUri,
+            title: currentTrack.title,
+          }
+        : null,
+    [currentTrack],
+  );
 
   const playAudio = useCallback(() => {
     audioEngineRef.current?.play();
@@ -788,14 +800,17 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
     <PlaybackContext value={value}>
       <PlaybackAudioEngine
         bands={bands}
+        metadata={audioMetadata}
         onDurationChange={handleAudioDurationChange}
         onEnded={handleAudioEnded}
         onError={handleAudioError}
         onLoaded={handleAudioLoaded}
         onLoading={handleAudioLoading}
+        onNext={nextTrack}
         onPause={handleAudioPause}
         onPlay={handleAudioPlay}
         onPositionChange={handleAudioPositionChange}
+        onPrevious={previousTrack}
         ref={audioEngineRef}
         shouldPlayOnLoad={shouldPlayOnLoad}
         source={currentTrack?.uri ?? ""}

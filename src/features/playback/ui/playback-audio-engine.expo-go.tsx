@@ -1,4 +1,8 @@
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import {
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+} from "expo-audio";
 import {
   forwardRef,
   useCallback,
@@ -17,6 +21,7 @@ export const ExpoGoPlaybackAudioEngine = forwardRef<
   PlaybackAudioEngineProps
 >(function ExpoGoPlaybackAudioEngine(
   {
+    metadata,
     onDurationChange,
     onEnded,
     onError,
@@ -39,6 +44,39 @@ export const ExpoGoPlaybackAudioEngine = forwardRef<
   const loadedRevisionRef = useRef(-1);
   const endedRevisionRef = useRef(-1);
   const previousPlayingRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    void setAudioModeAsync({
+      interruptionMode: "doNotMix",
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+    }).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (!source || !metadata) {
+      player.clearLockScreenControls();
+      return;
+    }
+
+    player.setActiveForLockScreen(
+      true,
+      {
+        albumTitle: metadata.album,
+        artist: metadata.artist,
+        artworkUrl: metadata.artworkUri,
+        title: metadata.title,
+      },
+      {
+        showSeekBackward: false,
+        showSeekForward: false,
+      },
+    );
+
+    return () => {
+      player.clearLockScreenControls();
+    };
+  }, [metadata, player, source]);
 
   const play = useCallback(() => {
     try {

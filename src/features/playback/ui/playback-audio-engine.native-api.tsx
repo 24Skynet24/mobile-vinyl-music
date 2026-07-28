@@ -1,8 +1,10 @@
 import {
   AudioContext,
   AudioManager,
+  PlaybackNotificationManager,
   type AudioBuffer,
   type AudioBufferSourceNode,
+  type PlaybackNotificationInfo,
 } from "react-native-audio-api";
 import {
   forwardRef,
@@ -25,20 +27,35 @@ import type {
 const POSITION_UPDATE_INTERVAL_MS = 100;
 const SOURCE_RELEASE_DELAY_MS = 50;
 
+function getNotificationArtwork(artworkUri?: string) {
+  if (!artworkUri) {
+    return undefined;
+  }
+
+  if (artworkUri.startsWith("file://")) {
+    return { uri: decodeURIComponent(artworkUri.slice("file://".length)) };
+  }
+
+  return { uri: artworkUri };
+}
+
 export const PlaybackAudioEngine = forwardRef<
   PlaybackAudioEngineHandle,
   PlaybackAudioEngineProps
 >(function PlaybackAudioEngine(
   {
     bands,
+    metadata,
     onDurationChange,
     onEnded,
     onError,
     onLoaded,
     onLoading,
+    onNext,
     onPause,
     onPlay,
     onPositionChange,
+    onPrevious,
     shouldPlayOnLoad,
     source,
     sourceRevision,
@@ -55,6 +72,11 @@ export const PlaybackAudioEngine = forwardRef<
   const loadRevisionRef = useRef(0);
   const playRequestRef = useRef(0);
   const playIntentRef = useRef(false);
+  const durationRef = useRef(0);
+  const notificationDismissedRef = useRef(false);
+  const metadataRef = useRef(metadata);
+  const onNextRef = useRef(onNext);
+  const onPreviousRef = useRef(onPrevious);
   const pendingSourceReleasesRef = useRef(
     new Map<AudioBufferSourceNode, ReturnType<typeof setTimeout>>(),
   );
@@ -63,6 +85,33 @@ export const PlaybackAudioEngine = forwardRef<
     contextRef.current = new AudioContext();
     graphRef.current = createEqualizerGraph(contextRef.current);
   }
+
+  metadataRef.current = metadata;
+  onNextRef.current = onNext;
+  onPreviousRef.current = onPrevious;
+
+  const syncPlaybackNotification = useCallback(
+    (state: "paused" | "playing", elapsedTime = positionRef.current) => {
+      const currentMetadata = metadataRef.current;
+      if (!currentMetadata || notificationDismissedRef.current) {
+        return Promise.resolve();
+      }
+
+      const info: PlaybackNotificationInfo = {
+        album: currentMetadata.album,
+        artist: currentMetadata.artist,
+        artwork: getNotificationArtwork(currentMetadata.artworkUri),
+        duration: durationRef.current,
+        elapsedTime,
+        speed: state === "playing" ? 1 : 0,
+        state,
+        title: currentMetadata.title,
+      };
+
+      return PlaybackNotificationManager.show(info).catch(() => undefined);
+    },
+    [],
+  );
 
   const releaseSource = useCallback((sourceNode: AudioBufferSourceNode) => {
     const timeoutId = pendingSourceReleasesRef.current.get(sourceNode);
@@ -136,9 +185,12 @@ export const PlaybackAudioEngine = forwardRef<
       return;
     }
 
+    notificationDismissedRef.current = false;
+
     if (sourceNodeRef.current) {
       playIntentRef.current = true;
       onPlay();
+      void syncPlaybackNotification("playing");
       return;
     }
 
@@ -178,6 +230,7 @@ export const PlaybackAudioEngine = forwardRef<
           playIntentRef.current = false;
           positionRef.current = buffer.duration;
           onPositionChange(buffer.duration);
+          void syncPlaybackNotification("paused", buffer.duration);
           onEnded();
         };
         sourceNode.connect(graph.input);
@@ -188,6 +241,7 @@ export const PlaybackAudioEngine = forwardRef<
         sourceNodeRef.current = sourceNode;
         sourceNode.start(0, offset);
         onPlay();
+        void syncPlaybackNotification("playing", offset);
       })
       .catch((error) => {
         if (request === playRequestRef.current) {
@@ -195,7 +249,14 @@ export const PlaybackAudioEngine = forwardRef<
         }
         onError(error instanceof Error ? error : new Error(String(error)));
       });
-  }, [onEnded, onError, onPlay, onPositionChange, releaseSource]);
+  }, [
+    onEnded,
+    onError,
+    onPlay,
+    onPositionChange,
+    releaseSource,
+    syncPlaybackNotification,
+  ]);
 
   const pause = useCallback(() => {
     const wasPlaying = playIntentRef.current || Boolean(sourceNodeRef.current);
@@ -205,6 +266,7 @@ export const PlaybackAudioEngine = forwardRef<
     if (!sourceNodeRef.current) {
       if (wasPlaying) {
         onPause();
+        void syncPlaybackNotification("paused");
       }
       return;
     }
@@ -213,7 +275,14 @@ export const PlaybackAudioEngine = forwardRef<
     stopSource();
     onPositionChange(positionRef.current);
     onPause();
-  }, [getCurrentPosition, onPause, onPositionChange, stopSource]);
+    void syncPlaybackNotification("paused");
+  }, [
+    getCurrentPosition,
+    onPause,
+    onPositionChange,
+    stopSource,
+    syncPlaybackNotification,
+  ]);
 
   const seekTo = useCallback(
     async (seconds: number) => {
@@ -228,12 +297,16 @@ export const PlaybackAudioEngine = forwardRef<
       stopSource();
       positionRef.current = Math.max(0, Math.min(seconds, buffer.duration));
       onPositionChange(positionRef.current);
+      void syncPlaybackNotification(
+        shouldResume ? "playing" : "paused",
+        positionRef.current,
+      );
 
       if (shouldResume) {
         play();
       }
     },
-    [onPositionChange, play, stopSource],
+    [onPositionChange, play, stopSource, syncPlaybackNotification],
   );
 
   useImperativeHandle(
@@ -253,6 +326,64 @@ export const PlaybackAudioEngine = forwardRef<
       updateEqualizerGraph(context, graph, bands);
     }
   }, [bands]);
+
+  useEffect(() => {
+    const subscriptions = [
+      PlaybackNotificationManager.addEventListener(
+        "playbackNotificationPlay",
+        () => play(),
+      ),
+      PlaybackNotificationManager.addEventListener(
+        "playbackNotificationPause",
+        () => pause(),
+      ),
+      PlaybackNotificationManager.addEventListener(
+        "playbackNotificationNext",
+        () => onNextRef.current(),
+      ),
+      PlaybackNotificationManager.addEventListener(
+        "playbackNotificationPrevious",
+        () => onPreviousRef.current(),
+      ),
+      PlaybackNotificationManager.addEventListener(
+        "playbackNotificationSeekTo",
+        ({ value }) => void seekTo(value),
+      ),
+      PlaybackNotificationManager.addEventListener(
+        "playbackNotificationDismissed",
+        () => {
+          notificationDismissedRef.current = true;
+          pause();
+        },
+      ),
+    ];
+
+    return () => {
+      for (const subscription of subscriptions) {
+        subscription?.remove();
+      }
+      void PlaybackNotificationManager.hide().catch(() => undefined);
+    };
+  }, [pause, play, seekTo]);
+
+  useEffect(() => {
+    if (!source || !metadata) {
+      void PlaybackNotificationManager.hide().catch(() => undefined);
+      return;
+    }
+
+    notificationDismissedRef.current = false;
+    void (async () => {
+      await syncPlaybackNotification(
+        playIntentRef.current ? "playing" : "paused",
+      );
+      await PlaybackNotificationManager.enableControl("play", true);
+      await PlaybackNotificationManager.enableControl("pause", true);
+      await PlaybackNotificationManager.enableControl("previous", true);
+      await PlaybackNotificationManager.enableControl("next", true);
+      await PlaybackNotificationManager.enableControl("seekTo", true);
+    })().catch(() => undefined);
+  }, [metadata, source, sourceRevision, syncPlaybackNotification]);
 
   useEffect(() => {
     AudioManager.setAudioSessionOptions({
@@ -305,6 +436,7 @@ export const PlaybackAudioEngine = forwardRef<
     ++playRequestRef.current;
     stopSource();
     bufferRef.current = null;
+    durationRef.current = 0;
     positionRef.current = 0;
     onPositionChange(0);
 
@@ -323,8 +455,13 @@ export const PlaybackAudioEngine = forwardRef<
         }
 
         bufferRef.current = buffer;
+        durationRef.current = buffer.duration;
         onDurationChange(buffer.duration);
         onLoaded();
+        void syncPlaybackNotification(
+          shouldPlayOnLoad ? "playing" : "paused",
+          0,
+        );
 
         if (shouldPlayOnLoad) {
           play();
@@ -348,6 +485,7 @@ export const PlaybackAudioEngine = forwardRef<
     source,
     sourceRevision,
     stopSource,
+    syncPlaybackNotification,
   ]);
 
   return null;

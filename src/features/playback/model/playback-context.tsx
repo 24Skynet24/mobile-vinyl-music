@@ -108,6 +108,7 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
   const [isHydrated, setIsHydrated] = useState(false);
   const currentPositionRef = useRef(0);
   const currentTrackIdRef = useRef<string | null>(null);
+  const appStateRef = useRef(AppState.currentState);
   const hasUserSelectedTrackRef = useRef(false);
   const isApplyingRestoreRef = useRef(false);
   const isWaitingForTrackResetRef = useRef(false);
@@ -288,15 +289,29 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    const intervalId = setInterval(
-      persistCurrentPlayback,
-      POSITION_SAVE_INTERVAL_MS,
-    );
+    const intervalId = setInterval(() => {
+      if (appStateRef.current === "active") {
+        persistCurrentPlayback();
+      }
+    }, POSITION_SAVE_INTERVAL_MS);
+
     const appStateSubscription = AppState.addEventListener(
       "change",
       (nextState) => {
+        const prevState = appStateRef.current;
+        appStateRef.current = nextState;
+
         if (nextState !== "active") {
           persistCurrentPlayback();
+        } else if (prevState !== "active") {
+          setStatus((current) => {
+            if (
+              Math.abs(current.currentTime - currentPositionRef.current) > 0.05
+            ) {
+              return { ...current, currentTime: currentPositionRef.current };
+            }
+            return current;
+          });
         }
       },
     );
@@ -656,9 +671,14 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (currentTrackId && status.duration > 0) {
-      updateTrackDuration(currentTrackId, status.duration);
+      if (
+        !currentTrack ||
+        Math.abs(currentTrack.duration - status.duration) > 0.5
+      ) {
+        updateTrackDuration(currentTrackId, status.duration);
+      }
     }
-  }, [currentTrackId, status.duration, updateTrackDuration]);
+  }, [currentTrack, currentTrackId, status.duration, updateTrackDuration]);
 
   useEffect(() => {
     if (endedSequence > handledEndedSequenceRef.current && currentTrackId) {
@@ -724,7 +744,10 @@ export function PlaybackProvider({ children }: PropsWithChildren) {
       return;
     }
 
-    setStatus((current) => ({ ...current, currentTime }));
+    currentPositionRef.current = currentTime;
+    if (appStateRef.current === "active") {
+      setStatus((current) => ({ ...current, currentTime }));
+    }
   }, []);
 
   const handleAudioPlay = useCallback(() => {

@@ -405,10 +405,19 @@ export const PlaybackAudioEngine = forwardRef<
         }
       },
     );
+
+    const routeChangeSubscription = AudioManager.addSystemEventListener(
+      "routeChange",
+      () => {
+        pause();
+      },
+    );
+
     const pendingSourceReleases = pendingSourceReleasesRef.current;
 
     return () => {
       interruptionSubscription?.remove();
+      routeChangeSubscription?.remove();
       cancelPendingOperations();
       stopSource();
 
